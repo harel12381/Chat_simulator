@@ -1,0 +1,18 @@
+{
+  "scenario_name": "Family Chat",
+  "my_name": "Daniel",
+  "group_info": {
+    "name": "משפחה",
+    "image": "profiles/mom.jpg" 
+  },
+  "participants": {
+    "Daniel": "profiles/me.jpg",
+    "Mom": "profiles/mom.jpg",
+    "Dad": "profiles/dad.jpg"
+  },
+  "messages": [
+    {"time": 1, "sender": "Mom", "text": "מתי אתה מגיע?", "timestamp": "19:00"},
+    {"time": 3, "sender": "Daniel", "text": "עוד 10 דקות", "timestamp": "19:01"},
+    {"time": 5, "sender": "Dad", "text": "סע בזהירות!", "timestamp": "19:02"}
+  ]
+}
