@@ -1,6 +1,6 @@
 {
   "scenario_name": "Family Trip Drama",
-  "my_name": "דניאל",
+  "my_name": "אמא",
   "group_info": {
     "name": "המשפחה",
     "image": "profiles/family_trip.jpg"
@@ -27,7 +27,13 @@
       "timestamp": "20:00"
     },
     {
-      "time": 4,
+      "time": 3,
+      "sender": "דניאל",
+      "text": "יששש! מתי יוצאים?",
+      "timestamp": "20:00"
+    },    
+    {
+      "time": 5,
       "sender": "דניאל",
       "text": "יששש! מתי יוצאים?",
       "timestamp": "20:00"

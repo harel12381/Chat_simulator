@@ -86,7 +86,7 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
 
     return bubble_h
 
-def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None):
+def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None, is_continuation=False):
     font_text = utils.load_font(config.FONT_SIZE_TEXT)
     font_time = utils.load_font(config.FONT_SIZE_TIME)
     font_name = utils.load_font(config.FONT_SIZE_NAME, bold=True)
@@ -200,7 +200,11 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     
     cursor_y = padding_top
     name_draw_y = cursor_y
-    if not is_me:
+    
+    # Show name logic: Only if not me AND not a continuation
+    show_name = (not is_me) and (not is_continuation)
+    
+    if show_name:
         cursor_y += 22 + gap_name_content
 
     img_draw_y = cursor_y
@@ -230,9 +234,11 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     
     draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=22, fill=bg_color)
     
-    draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
+    # Draw tail only if not continuation
+    if not is_continuation:
+        draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
 
-    if not is_me:
+    if show_name:
         final_sender = get_display(sender_name, base_dir='R')
         name_w = draw.textlength(final_sender, font=font_name)
         name_x = int(x + bubble_w - name_w - 15)
@@ -356,8 +362,14 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     for i, msg in enumerate(visible_msgs):
         if msg.get('is_system') and i > 0:
             total_h += 15
+            
+        is_continuation = False
+        if i > 0:
+            prev = visible_msgs[i-1]
+            if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
+                is_continuation = True
 
-        h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None)
+        h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None, is_continuation=is_continuation)
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
         
@@ -418,6 +430,12 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     for i, msg in enumerate(visible_msgs):
         is_me = (msg['sender'] == my_name)
         msg_h = msg_heights[i]
+        
+        is_continuation = False
+        if i > 0:
+            prev = visible_msgs[i-1]
+            if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
+                is_continuation = True
 
         if msg.get('is_system') and i > 0:
             current_y += 15
@@ -432,13 +450,15 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                 if other_participants and other_participants.issubset(subsequent_senders):
                     ticks = config.COLOR_TICKS_BLUE
             
-            draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks)
+            draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks, is_continuation=is_continuation)
             
             if not is_me and not msg.get('is_system'):
-                avatar = participants_imgs.get(msg['sender'])
-                if avatar:
-                    avatar_x = config.WIDTH - config.PADDING - config.AVATAR_SIZE
-                    img.paste(avatar, (avatar_x, int(current_y)), avatar)
+                # Only draw avatar if NOT continuation
+                if not is_continuation:
+                    avatar = participants_imgs.get(msg['sender'])
+                    if avatar:
+                        avatar_x = config.WIDTH - config.PADDING - config.AVATAR_SIZE
+                        img.paste(avatar, (avatar_x, int(current_y)), avatar)
 
         current_y += msg_h + config.MESSAGE_SPACING
         
