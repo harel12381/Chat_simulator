@@ -34,6 +34,26 @@ def draw_header_icons(img, draw, static_assets):
         if v_icon.width != 60: v_icon = v_icon.resize((60, 45))
         img.paste(v_icon, (110, 28), v_icon)
 
+def draw_tail(draw, x, y, bubble_w, color, is_left_side):
+    c = safe_color(color)
+    
+    if is_left_side:
+        points = [
+            (x + 10, y),      
+            (x - 10, y),      
+            (x + 10, y + 20)  
+        ]
+    else:
+        right_edge = x + bubble_w
+        points = [
+            (right_edge - 10, y),  
+            (right_edge + 10, y),    
+            (right_edge - 10, y + 20) 
+        ]
+        
+    draw.polygon(points, fill=c)
+
+
 def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
     bubble_w = 80
     bubble_h = 50
@@ -41,30 +61,27 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
     
     draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=15, fill=bg_color)
     
+    draw_tail(draw, x, y, bubble_w, bg_color, is_left_side=False)
+
     dot_radius = 4
     base_dot_y = y + (bubble_h // 2)
     start_dot_x = x + 25
     gap = 15
-    speed = 8.0
+    speed = 8.0 
     
     for i in range(3):
         offset_y = math.sin(t * speed + (i * 1.5)) * 5 
-        
         dx = start_dot_x + (i * gap)
         dy = base_dot_y + offset_y
-        
         dot_color = getattr(config, 'COLOR_TYPING_DOT', (160, 160, 160))
         draw.ellipse((dx - dot_radius, dy - dot_radius, dx + dot_radius, dy + dot_radius), fill=dot_color)
 
     if typers_avatars and img_target:
         avatar_x_base = config.WIDTH - config.PADDING - config.AVATAR_SIZE
-        
         for i, avatar in enumerate(reversed(typers_avatars)):
             offset = i * 25 
             cur_x = avatar_x_base - offset
-            bg_mask_size = config.AVATAR_SIZE + 4
             draw.ellipse((cur_x-2, y-2, cur_x + config.AVATAR_SIZE+2, y + config.AVATAR_SIZE+2), fill=safe_color(config.COLOR_BG_SOLID))
-            
             img_target.paste(avatar, (cur_x, int(y)), avatar)
 
     return bubble_h
@@ -167,7 +184,9 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     bubble_w, bubble_h = int(bubble_w), int(bubble_h)
     
     draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=15, fill=bg_color)
-    
+
+    draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
+
     if not is_me:
         final_sender = get_display(sender_name, base_dir='R')
         name_w = draw.textlength(final_sender, font=font_name)
@@ -198,7 +217,6 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     for m in script:
         if t < m['time'] <= (t + 1.0) and m['sender'] != my_name and not m.get('is_system'):
             typers.append(m['sender'])
-    
     typers = list(set(typers)) 
     
     temp_img = Image.new("RGB", (1,1)) 
@@ -212,10 +230,8 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
         
-    typing_bubble_height = 0
     if typers:
-        typing_bubble_height = 50 + config.MESSAGE_SPACING 
-        total_h += typing_bubble_height
+        total_h += 50 + config.MESSAGE_SPACING
 
     visible_area = config.HEIGHT - config.HEADER_HEIGHT - 20
     start_y = config.HEADER_HEIGHT + 20
@@ -250,10 +266,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
 
     if typers and current_y > config.HEADER_HEIGHT:
         typers_avatars = [participants_imgs.get(name) for name in typers if participants_imgs.get(name)]
-        
-
         typing_x = config.WIDTH - 80 - config.PADDING - config.AVATAR_SIZE - 10
-        
         draw_typing_bubble(img, draw, typing_x, current_y, t, typers_avatars)
 
     draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
