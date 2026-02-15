@@ -4,6 +4,8 @@ import math
 from PIL import Image, ImageDraw
 from bidi.algorithm import get_display
 from . import config, utils
+# הוספת הייבוא של Pilmoji
+from pilmoji import Pilmoji
 
 def safe_color(color):
     if isinstance(color, str): return color
@@ -96,8 +98,15 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     sender_name = msg.get('sender', "")
     time_str = msg.get('timestamp', "")
     
+    # חישוב גובה שורה משוער לטובת Pilmoji
+    sample_bbox = draw.textbbox((0, 0), "Aj", font=font_text)
+    line_height = (sample_bbox[3] - sample_bbox[1]) + 6
+
     if msg.get('is_system'):
         font_text = utils.load_font(22, bold=True)
+        # עדכון גובה שורה לפונט מערכת
+        sample_bbox_sys = draw.textbbox((0, 0), "Aj", font=font_text)
+        line_height_sys = (sample_bbox_sys[3] - sample_bbox_sys[1]) + 6
         
         words = text_content.split(' ')
         wrapped_lines = []
@@ -133,14 +142,29 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         center_x = x + bubble_w / 2
         center_y = y + bubble_h / 2
         
-        draw.multiline_text(
-            (center_x, center_y), 
-            final_text, 
-            font=font_text, 
-            fill=safe_color(config.COLOR_TEXT_META), 
-            align='center', 
-            anchor="mm"
-        )
+        # שימוש ב-Pilmoji אם יש תמונת יעד
+        if img_target:
+            with Pilmoji(img_target) as pilmoji:
+                total_text_h = len(wrapped_lines) * line_height_sys
+                start_y = center_y - (total_text_h / 2)
+                current_sys_y = start_y
+                
+                for line in wrapped_lines:
+                    final_line = get_display(line, base_dir='R')
+                    w = draw.textlength(final_line, font=font_text)
+                    line_x = center_x - (w / 2)
+                    pilmoji.text((line_x, current_sys_y), final_line, font=font_text, fill=safe_color(config.COLOR_TEXT_META))
+                    current_sys_y += line_height_sys
+        else:
+             # Fallback לשלב המדידה (למרות שלא מציירים)
+             draw.multiline_text(
+                (center_x, center_y), 
+                final_text, 
+                font=font_text, 
+                fill=safe_color(config.COLOR_TEXT_META), 
+                align='center', 
+                anchor="mm"
+            )
         return bubble_h
     
     img_obj = None
@@ -161,10 +185,10 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
 
     text_w, text_h = 0, 0
     final_text = ""
+    wrapped_lines = [] # נשמור את השורות לציור עם Pilmoji
     
     if text_content:
         words = text_content.split(' ')
-        wrapped_lines = []
         current_line = []
         
         for word in words:
@@ -201,7 +225,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     cursor_y = padding_top
     name_draw_y = cursor_y
     
-    # Show name logic: Only if not me AND not a continuation
+    # הצגת שם: רק אם זה לא אני וגם זו לא הודעת המשך
     show_name = (not is_me) and (not is_continuation)
     
     if show_name:
@@ -234,7 +258,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     
     draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=22, fill=bg_color)
     
-    # Draw tail only if not continuation
+    # ציור זנב רק אם זו לא הודעת המשך
     if not is_continuation:
         draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
 
@@ -250,7 +274,22 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
 
     if text_content:
         text_draw_x = int(x + bubble_w - 15)
-        draw.multiline_text((text_draw_x, y_pos + text_draw_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN), align='right', anchor="ra")
+        
+        if img_target:
+            # שימוש ב-Pilmoji לציור אימוג'ים
+            with Pilmoji(img_target) as pilmoji:
+                current_text_y_loop = y_pos + text_draw_y
+                for line in wrapped_lines:
+                    final_line = get_display(line, base_dir='R')
+                    w = draw.textlength(final_line, font=font_text)
+                    # יישור לימין ידני
+                    line_x = text_draw_x - w
+                    
+                    pilmoji.text((line_x, current_text_y_loop), final_line, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN))
+                    current_text_y_loop += line_height
+        else:
+            # Fallback למדידה
+            draw.multiline_text((text_draw_x, y_pos + text_draw_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN), align='right', anchor="ra")
     
     draw.text((int(time_x), y_pos + meta_draw_y), time_str, font=font_time, fill=safe_color(config.COLOR_TEXT_META))
     if is_me and ticks_color:
@@ -313,14 +352,16 @@ def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, 
 
     current_text_y = input_y + (base_padding // 2) - 2
     
-    for line in wrapped_lines:
-        final_line = get_display(line, base_dir='R')
-        w = draw.textlength(final_line, font=font_input)
-        
-        text_x = config.WIDTH - 20 - w
-        draw.text((text_x, current_text_y), final_line, font=font_input, fill=(0,0,0))
-        
-        current_text_y += line_height
+    # שימוש ב-Pilmoji לציור בתיבת הטקסט (כדי לראות אימוג'ים בזמן הקלדה)
+    with Pilmoji(img) as pilmoji:
+        for line in wrapped_lines:
+            final_line = get_display(line, base_dir='R')
+            w = draw.textlength(final_line, font=font_input)
+            
+            text_x = config.WIDTH - 20 - w
+            pilmoji.text((text_x, current_text_y), final_line, font=font_input, fill=(0,0,0))
+            
+            current_text_y += line_height
 
     if active_char:
         pos = utils.get_key_position(active_char)
@@ -338,7 +379,10 @@ def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, 
             font_pop = utils.load_font(40, bold=True)
             char_display = get_display(active_char, base_dir='R')
             w = draw.textlength(char_display, font=font_pop)
-            draw.text((pop_x + (pop_w-w)/2, pop_y + 5), char_display, font=font_pop, fill=safe_color(config.COLOR_KEY_POPUP_TEXT))   
+            
+            # גם כאן כדאי להשתמש ב-pilmoji למקרה שהתו הנלחץ הוא אימוג'י
+            with Pilmoji(img) as pilmoji:
+                 pilmoji.text((pop_x + (pop_w-w)/2, pop_y + 5), char_display, font=font_pop, fill=safe_color(config.COLOR_KEY_POPUP_TEXT))   
 
 def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets, chat_media, typing_state=None, current_group_name=None, current_group_members=None):
     img = Image.new("RGB", (config.WIDTH, config.HEIGHT), safe_color(config.COLOR_BG_SOLID))
@@ -353,6 +397,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
             typers.append(m['sender'])
     typers = list(set(typers)) 
     
+    # יצירת תמונת דמי למדידות ראשוניות (עבור חישוב גובה)
     temp_img = Image.new("RGB", (1,1)) 
     temp_draw = ImageDraw.Draw(temp_img)
     
@@ -369,6 +414,10 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
             if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
                 is_continuation = True
 
+        # מעבירים את temp_img כדי שהמדידה תעבוד, אבל draw_bubble יזהה שזה מדידה
+        # הערה: בשלב המדידה לא קריטי אם pilmoji מצייר או לא, העיקר שיחזיר גובה.
+        # בקוד המעודכן, draw_bubble משתמש ב-img_target רק לציור בפועל,
+        # ולמדידה משתמש ב-draw הרגיל, אז זה בטוח.
         h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None, is_continuation=is_continuation)
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
@@ -450,10 +499,10 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                 if other_participants and other_participants.issubset(subsequent_senders):
                     ticks = config.COLOR_TICKS_BLUE
             
+            # כאן אנחנו מעבירים את img האמיתי, אז pilmoji יעבוד
             draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks, is_continuation=is_continuation)
             
             if not is_me and not msg.get('is_system'):
-                # Only draw avatar if NOT continuation
                 if not is_continuation:
                     avatar = participants_imgs.get(msg['sender'])
                     if avatar:
@@ -478,7 +527,12 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     header_name = current_group_name if current_group_name else group_info['name']
     grp_name = get_display(header_name, base_dir='R')
     f_header = utils.load_font(33, bold=True)
-    draw.text((config.WIDTH - 50 - header_offset, 50), grp_name, font=f_header, fill="white", anchor="rs")
+    
+    # ציור שם הקבוצה עם Pilmoji למקרה שיש אימוג'י בשם
+    with Pilmoji(img) as pilmoji:
+        # עוגן rs (Right Bottom/Baseline?) לא תמיד נתמך מושלם בpilmoji עם יישור, נצייר רגיל ונחשב מיקום
+        w = draw.textlength(grp_name, font=f_header)
+        pilmoji.text((config.WIDTH - 50 - header_offset - w, 50 - 33), grp_name, font=f_header, fill="white")
     
     if current_group_members is not None:
         display_participants = [name for name in current_group_members if name != my_name]
@@ -489,7 +543,10 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
     parts_display = get_display(parts_txt, base_dir='R')
     f_sub = utils.load_font(18)
-    draw.text((config.WIDTH - 50 - header_offset, 78), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
+    
+    with Pilmoji(img) as pilmoji:
+         w_sub = draw.textlength(parts_display, font=f_sub)
+         pilmoji.text((config.WIDTH - 50 - header_offset - w_sub, 78 - 18), parts_display, font=f_sub, fill=(200,200,200))
     
     if group_avatar:
         dest_x = config.WIDTH - 30 - header_offset
