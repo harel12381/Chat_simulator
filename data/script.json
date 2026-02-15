@@ -13,6 +13,7 @@
   "messages": [
     {"time": 1, "sender": "Mom", "text": "מתי אתה מגיע?", "timestamp": "19:00"},
     {"time": 3, "sender": "Daniel", "text": "עוד 10 דקות", "timestamp": "19:01"},
-    {"time": 5, "sender": "Dad", "text": "סע בזהירות!", "timestamp": "19:02"}
+    {"time": 5, "sender": "Dad", "text": "סע בזהירות!", "timestamp": "19:02"},
+    {"time": 7, "sender": "Daniel", "text": "תראו איזה יופי!", "image": "chat_media/my_img.jpg", "timestamp": "19:03"}
   ]
 }

@@ -28,15 +28,35 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         participants_imgs[name] = utils.get_circular_avatar(final_path)
 
     group_img_path = script_data.get('group_info', {}).get('image')
-    final_group_path = assets_paths['default_group']
-
+    final_group_path = assets_paths.get('default_group')
+    
     if group_img_path:
         full_group_path = os.path.join(data_dir_path, group_img_path)
         if os.path.exists(full_group_path):
             final_group_path = full_group_path
         else:
             print(f"Warning: Group image not found at {full_group_path}, using default.")
-    group_avatar = utils.get_circular_avatar(final_group_path)
+    
+    group_avatar = None
+    if final_group_path and os.path.exists(final_group_path):
+        group_avatar = utils.get_circular_avatar(final_group_path)
+
+    chat_media = {}
+    for msg in script_data['messages']:
+        if 'image' in msg and msg['image']:
+            img_path = os.path.join(data_dir_path, msg['image'])
+            if not os.path.exists(img_path):
+                img_path = os.path.join(data_dir_path, 'chat_media', os.path.basename(msg['image']))
+            
+            if os.path.exists(img_path):
+                try:
+                    loaded_img = PIL.Image.open(img_path).convert("RGBA")
+                    chat_media[msg['image']] = loaded_img
+                    print(f"Loaded chat image: {msg['image']}")
+                except Exception as e:
+                    print(f"Error loading chat image {img_path}: {e}")
+            else:
+                print(f"Warning: Chat image not found: {msg['image']}")
 
     static_assets = {}
     if os.path.exists(assets_paths['video_icon']):
@@ -50,14 +70,15 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     
     def make_frame(t):
         return drawer.render_frame(
-            t,
+            t, 
             script_data['messages'], 
             participants_imgs, 
-            script_data['group_info'],
+            script_data['group_info'], 
             group_avatar,
             my_name, 
             bg_img,
-            static_assets
+            static_assets,
+            chat_media 
         )
 
     clip = VideoClip(make_frame, duration=duration)
