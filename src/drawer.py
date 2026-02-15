@@ -152,22 +152,38 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         current_y += msg_h + config.MESSAGE_SPACING
 
     # Header
-    draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))    
+    draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
+    
+    header_offset = 70 
+
     grp_name = get_display(group_info['name'], base_dir='R')
     f_header = utils.load_font(24, bold=True)
-    draw.text((config.WIDTH - 80, 25), grp_name, font=f_header, fill="white", anchor="rs")
+    draw.text((config.WIDTH - 80 - header_offset, 25), grp_name, font=f_header, fill="white", anchor="rs")
     
     parts_txt = ", ".join(participants_imgs.keys())
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
     parts_display = get_display(parts_txt, base_dir='R')
     f_sub = utils.load_font(18)
-    draw.text((config.WIDTH - 80, 60), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
+    draw.text((config.WIDTH - 80 - header_offset, 60), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
     
     if group_avatar:
-        dest_x = config.WIDTH - 70
+        dest_x = config.WIDTH - 70 - header_offset
         dest_y = 25
-        img.paste(group_avatar, (dest_x, dest_y), group_avatar)    
-        
+        img.paste(group_avatar, (dest_x, dest_y), group_avatar)
+    else:
+        draw.ellipse((config.WIDTH - 70 - header_offset, 25, config.WIDTH - 20 - header_offset, 75), fill=(200,200,200))
+
+    back_color = (255, 255, 255)
+
+    arrow_tip = (config.WIDTH - 20, 50)
+    arrow_top = (config.WIDTH - 35, 35)
+    arrow_bottom = (config.WIDTH - 35, 65)
+    
+    draw.line([arrow_top, arrow_tip, arrow_bottom], fill=back_color, width=3)
+    
+    font_back = utils.load_font(28) 
+    draw.text((config.WIDTH - 45, 50), "4", font=font_back, fill=back_color, anchor="rm")
+
     draw_header_icons(img, draw, static_assets)
     
     return np.array(img)
