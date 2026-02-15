@@ -20,19 +20,19 @@ def draw_header_icons(img, draw, static_assets):
     icon_color = safe_color(config.COLOR_HEADER_TEXT)
     mx, my = 15, 35
     for i in range(3):
-        x1, y1 = mx, my + i*11
+        x1, y1 = mx, my + i*12
         x2, y2 = mx+6, y1+6
         draw.ellipse((x1, y1, x2, y2), fill=icon_color)
 
     if 'phone_icon' in static_assets:
         p_icon = static_assets['phone_icon']
-        if p_icon.width != 50: p_icon = p_icon.resize((50, 50))
-        img.paste(p_icon, (50, 25), p_icon)
+        if p_icon.width != 35: p_icon = p_icon.resize((35, 35))
+        img.paste(p_icon, (50, 32), p_icon)
 
     if 'video_icon' in static_assets:
         v_icon = static_assets['video_icon']
-        if v_icon.width != 60: v_icon = v_icon.resize((60, 45))
-        img.paste(v_icon, (110, 28), v_icon)
+        if v_icon.width != 45: v_icon = v_icon.resize((40, 33))
+        img.paste(v_icon, (110, 34), v_icon)
 
 def draw_tail(draw, x, y, bubble_w, color, is_left_side):
     c = safe_color(color)
@@ -96,6 +96,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     time_str = msg.get('timestamp', "")
     
     if msg.get('is_system'):
+        font_text = utils.load_font(22, bold=True)
         words = text_content.split(' ')
         wrapped_lines = []
         current_line = []
@@ -139,6 +140,12 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         img_w = max_img_width
         img_h = int(raw_img.height * ratio)
         img_obj = raw_img.resize((img_w, img_h))
+        mask = Image.new("L", (img_w, img_h), 0)
+        mask_draw = ImageDraw.Draw(mask)
+        mask_draw.rounded_rectangle([(0, 0), (img_w, img_h)], radius=15, fill=255)
+        rounded_img = Image.new("RGBA", (img_w, img_h), (0,0,0,0))
+        rounded_img.paste(img_obj, (0,0), mask=mask)
+        img_obj = rounded_img
 
     text_w, text_h = 0, 0
     final_text = ""
@@ -177,7 +184,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     bubble_w = max(content_w, time_w + 40)
     
     padding_top, padding_bottom = 10, 12
-    gap_name_content, gap_img_text, gap_content_meta = 5, 8, 10
+    gap_name_content, gap_img_text, gap_content_meta = 5, 8, 15
     
     cursor_y = padding_top
     name_draw_y = cursor_y
@@ -220,7 +227,8 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         draw.text((name_x, y_pos + name_draw_y), final_sender, font=font_name, fill="orange")
 
     if img_obj and img_target:
-        img_target.paste(img_obj, (x + 5, int(y_pos + img_draw_y)), img_obj)
+        img_paste_x = x + (bubble_w - img_w) // 2
+        img_target.paste(img_obj, (int(img_paste_x), int(y_pos + img_draw_y)), img_obj)
 
     if text_content:
         text_draw_x = int(x + bubble_w - 15)
@@ -416,14 +424,15 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
     header_offset = 70 
     grp_name = get_display(group_info['name'], base_dir='R')
-    f_header = utils.load_font(24, bold=True)
-    draw.text((config.WIDTH - 80 - header_offset, 25), grp_name, font=f_header, fill="white", anchor="rs")
+    f_header = utils.load_font(33, bold=True)
+    draw.text((config.WIDTH - 80 - header_offset, 50), grp_name, font=f_header, fill="white", anchor="rs")
     
-    parts_txt = ", ".join(participants_imgs.keys())
+    display_participants = [name for name in participants_imgs.keys() if name != my_name]
+    parts_txt = ", ".join(display_participants)    
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
     parts_display = get_display(parts_txt, base_dir='R')
     f_sub = utils.load_font(18)
-    draw.text((config.WIDTH - 80 - header_offset, 60), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
+    draw.text((config.WIDTH - 80 - header_offset, 78), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
     
     if group_avatar:
         dest_x = config.WIDTH - 70 - header_offset

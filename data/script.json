@@ -7,15 +7,15 @@
   },
   "participants": {
     "Daniel": "profiles/me.jpg",
-    "Mom": "profiles/mom.jpg",
-    "Dad": "profiles/dad.jpg"
+    "אמא": "profiles/mom.jpg",
+    "אבא": "profiles/dad.jpg"
   },
   "messages": [
     {"time": 1,"text": "הקבוצה 'משפחה' נוצרה","is_system": true,"sender": "","timestamp": ""},
-    {"time": 3, "sender": "Mom", "text": "מתי אתה מגיע?", "timestamp": "19:00"},
-    {"time": 3.5, "sender": "Dad", "text": "סע בזהירות!", "timestamp": "19:00"},
+    {"time": 3, "sender": "אמא", "text": "מתי אתה מגיע?", "timestamp": "19:00"},
+    {"time": 3.5, "sender": "אבא", "text": "סע בזהירות!", "timestamp": "19:00"},
     {"time": 4.5, "sender": "Daniel", "text": "עוד 10 דקות", "timestamp": "19:01"},
-    {"time": 5, "sender": "Dad", "text": "סע בזהירות!", "timestamp": "19:02"},
+    {"time": 5, "sender": "אבא", "text": "סע בזהירות!", "timestamp": "19:02"},
     {"time": 7, "sender": "Daniel", "text": "תראו אגגג גגג גגגג גגגג גגגי זה יוכדג  דגכד גכדג דכדג פראו אגגג גגג גגגג גגגג גגגי זה יוכדג  דגכד גכדג דכדג פי!", "image": "chat_media/my_img.jpg", "timestamp": "19:03"}
   ]
 }
