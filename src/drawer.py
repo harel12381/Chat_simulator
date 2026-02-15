@@ -95,7 +95,7 @@ def draw_bubble(draw, msg, is_me, y_pos, ticks_color=None):
     
     return bubble_h
 
-def render_frame(t, script, participants_imgs, group_info, my_name, bg_img, static_assets):
+def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets):
     img = Image.new("RGB", (config.WIDTH, config.HEIGHT), safe_color(config.COLOR_BG_SOLID))
     if bg_img:
         img.paste(bg_img, (0,0))
@@ -152,8 +152,7 @@ def render_frame(t, script, participants_imgs, group_info, my_name, bg_img, stat
         current_y += msg_h + config.MESSAGE_SPACING
 
     # Header
-    draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
-    
+    draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))    
     grp_name = get_display(group_info['name'], base_dir='R')
     f_header = utils.load_font(24, bold=True)
     draw.text((config.WIDTH - 80, 25), grp_name, font=f_header, fill="white", anchor="rs")
@@ -164,7 +163,11 @@ def render_frame(t, script, participants_imgs, group_info, my_name, bg_img, stat
     f_sub = utils.load_font(18)
     draw.text((config.WIDTH - 80, 60), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
     
-    draw.ellipse((config.WIDTH - 70, 25, config.WIDTH - 20, 75), fill=(200,200,200))
+    if group_avatar:
+        dest_x = config.WIDTH - 70
+        dest_y = 25
+        img.paste(group_avatar, (dest_x, dest_y), group_avatar)    
+        
     draw_header_icons(img, draw, static_assets)
     
     return np.array(img)

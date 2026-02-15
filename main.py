@@ -34,6 +34,7 @@ def main():
         "video_icon": os.path.join(ASSETS_DIR, 'images', 'video_icon.png'),
         "phone_icon": os.path.join(ASSETS_DIR, 'images', 'phone_icon.png'),
         "default_avatar": os.path.join(ASSETS_DIR, 'images', 'default_avatar.png'),
+        "default_group": os.path.join(ASSETS_DIR, 'images', 'default_grupe_img.png'),
         
         "sounds": {
             "sent": os.path.join(ASSETS_DIR, 'sounds', 'msg_sent.mp3'),

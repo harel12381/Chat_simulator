@@ -27,6 +27,17 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         final_path = full_path if os.path.exists(full_path) else default_avatar_path
         participants_imgs[name] = utils.get_circular_avatar(final_path)
 
+    group_img_path = script_data.get('group_info', {}).get('image')
+    final_group_path = assets_paths['default_group']
+
+    if group_img_path:
+        full_group_path = os.path.join(data_dir_path, group_img_path)
+        if os.path.exists(full_group_path):
+            final_group_path = full_group_path
+        else:
+            print(f"Warning: Group image not found at {full_group_path}, using default.")
+    group_avatar = utils.get_circular_avatar(final_group_path)
+
     static_assets = {}
     if os.path.exists(assets_paths['video_icon']):
          static_assets['video_icon'] = PIL.Image.open(assets_paths['video_icon']).resize((50,40))
@@ -39,10 +50,11 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     
     def make_frame(t):
         return drawer.render_frame(
-            t, 
+            t,
             script_data['messages'], 
             participants_imgs, 
-            script_data['group_info'], 
+            script_data['group_info'],
+            group_avatar,
             my_name, 
             bg_img,
             static_assets
