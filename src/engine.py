@@ -14,7 +14,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     bg_img = None
     if os.path.exists(assets_paths['background']):
         bg_img = PIL.Image.open(assets_paths['background']).convert("RGBA").resize((config.WIDTH, config.HEIGHT))
-        overlay = PIL.Image.new('RGBA', bg_img.size, (240, 242, 245, 200)) # המספר 200 הוא רמת השקיפות
+        overlay = PIL.Image.new('RGBA', bg_img.size, (240, 242, 245, 200)) 
         bg_img = PIL.Image.alpha_composite(bg_img, overlay).convert("RGB")
     else:
         print(f"Warning: Background image not found at {assets_paths['background']}")
@@ -61,17 +61,26 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     if os.path.exists(assets_paths['phone_icon']):
          static_assets['phone_icon'] = PIL.Image.open(assets_paths['phone_icon']).resize((40,40))
     
+    # טעינת שתי המקלדות
     keyboard_path = assets_paths.get('keyboard_image') or os.path.join(assets_paths['base_assets_dir'], 'images', 'keyboard.png')
     if os.path.exists(keyboard_path):
         static_assets['keyboard'] = PIL.Image.open(keyboard_path).convert("RGBA").resize((config.WIDTH, config.KEYBOARD_HEIGHT))
     else:
         static_assets['keyboard'] = None
+
+    emoji_kb_path = os.path.join(assets_paths['base_assets_dir'], 'images', 'emoji_keyboard.png')
+    if os.path.exists(emoji_kb_path):
+        static_assets['emoji_keyboard'] = PIL.Image.open(emoji_kb_path).convert("RGBA").resize((config.WIDTH, config.KEYBOARD_HEIGHT))
+    else:
+        print("Warning: emoji_keyboard.png not found. Falling back to regular keyboard.")
+        static_assets['emoji_keyboard'] = static_assets['keyboard']
+
     send_icon_path = os.path.join(assets_paths['base_assets_dir'], 'images', 'send_icon.png')
     if os.path.exists(send_icon_path):
         static_assets['send_icon'] = PIL.Image.open(send_icon_path).convert("RGBA").resize((50, 50))
     else:
         static_assets['send_icon'] = None
-        print("Warning: send_icon.png not found!")
+        
     typing_sounds = []
     
     type_sound_path_1 = os.path.join(assets_paths['base_assets_dir'], 'sounds', 'type_sound.mp3')
@@ -82,9 +91,6 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     if os.path.exists(type_sound_path_2):
         typing_sounds.append(AudioFileClip(type_sound_path_2))
     
-    if not typing_sounds:
-        print("Warning: No typing sounds found!")
-
     sound_sent = None
     if os.path.exists(assets_paths['sounds']['sent']):
         sound_sent = AudioFileClip(assets_paths['sounds']['sent'])
@@ -107,8 +113,29 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         text = msg.get('text', "")
         
         if is_me and text and not msg.get('is_system'):
-            avg_time_per_char = 0.12
-            total_duration = max(len(text) * avg_time_per_char, 1.0)
+            actions_sequence = []
+            current_mode = 'text'
+            
+            for char in text:
+                is_em = utils.is_emoji(char)
+                
+                if is_em and current_mode == 'text':
+                    actions_sequence.append({'type': 'click_emoji_btn', 'char': None, 'duration': 0.4})
+                    current_mode = 'emoji'
+                
+                elif not is_em and current_mode == 'emoji':
+                    actions_sequence.append({'type': 'click_abc_btn', 'char': None, 'duration': 0.4})
+                    current_mode = 'text'
+                
+                if current_mode == 'emoji':
+                    actions_sequence.append({'type': 'type_emoji', 'char': char, 'duration': 0.6}) 
+                else:
+                    base_dur = 0.12
+                    if char in " ,.": base_dur += 0.1
+                    dur = random.uniform(base_dur * 0.8, base_dur * 1.2)
+                    actions_sequence.append({'type': 'type_text', 'char': char, 'duration': dur})
+            
+            total_duration = sum(a['duration'] for a in actions_sequence)
             
             ideal_start_time = msg['time'] - total_duration
             earliest_possible_start = last_msg_end_time + 0.5
@@ -121,37 +148,44 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 actual_start = ideal_start_time
                 actual_end = msg['time']
 
-            char_weights = []
-            for char in text:
-                weight = random.uniform(0.5, 1.5)
-                
-                if char in " ,.":
-                    weight += 1.5 
-                
-                char_weights.append(weight)
-            
-            total_weight = sum(char_weights)
-            normalized_intervals = [(w / total_weight) * total_duration for w in char_weights]
-            
             char_events = []
             current_t = actual_start
+            current_typed_str = ""
+            active_kb_mode = 'text'
             
-            for idx, char in enumerate(text):
-                char_events.append({'char': char, 'time': current_t})
+            for action in actions_sequence:
+                action_type = action['type']
+                char = action['char']
                 
-                if typing_sounds:
+                event_data = {
+                    'time': current_t,
+                    'duration': action['duration'],
+                    'action': action_type,
+                    'char': char,
+                    'kb_mode_at_start': active_kb_mode
+                }
+                
+                if action_type == 'click_emoji_btn':
+                    active_kb_mode = 'emoji'
+                elif action_type == 'click_abc_btn':
+                    active_kb_mode = 'text'
+                elif action_type in ['type_text', 'type_emoji']:
+                    current_typed_str += char
+                    
+                if typing_sounds and action_type in ['type_text', 'type_emoji']:
                     chosen_sound = random.choice(typing_sounds)
-                    clip_len = min(0.1, normalized_intervals[idx]) 
+                    clip_len = min(0.1, action['duration']) 
                     clip = chosen_sound.subclip(0, clip_len).set_start(current_t)
                     audio_clips.append(clip)
                 
-                current_t += normalized_intervals[idx]
+                char_events.append(event_data)
+                current_t += action['duration']
 
             typing_events.append({
                 'start': actual_start,
                 'end': actual_end,
                 'text': text,
-                'char_schedule': char_events
+                'schedule': char_events
             })
 
         last_msg_end_time = msg['time']
@@ -162,26 +196,52 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
             audio_clips.append(sound_received.set_start(msg['time']))
 
     def get_typing_state(t):
-        for event in typing_events:
-            if event['start'] <= t < event['end']:
+        for group in typing_events:
+            if group['start'] <= t < group['end']:
                 current_text = ""
-                active_char = None
-                for ce in event['char_schedule']:
-                    if ce['time'] <= t:
-                        current_text += ce['char']
-                        if t - ce['time'] < 0.15: 
-                            active_char = ce['char']
-                return {'is_typing': True, 'current_text': current_text, 'active_char': active_char}
-        return {'is_typing': False, 'current_text': "", 'active_char': None}
+                current_kb_mode = 'text'
+                active_touch = None 
+                active_char = None 
+                
+                for event in group['schedule']:
+                    if t >= event['time']:
+                        if event['action'] in ['type_text', 'type_emoji']:
+                             current_text += event['char']
+                        
+                        if event['action'] == 'click_emoji_btn':
+                            current_kb_mode = 'emoji'
+                        elif event['action'] == 'click_abc_btn':
+                            current_kb_mode = 'text'
+                        elif event['kb_mode_at_start'] == 'emoji':
+                            current_kb_mode = 'emoji'
+
+                        time_since_event = t - event['time']
+                        if 0 <= time_since_event < 0.15:
+                            if event['action'] == 'type_text':
+                                active_char = event['char']
+                                active_touch = utils.get_key_position(event['char'])
+                            elif event['action'] == 'type_emoji':
+                                active_touch = utils.get_emoji_position(event['char'])
+                            elif event['action'] == 'click_emoji_btn':
+                                active_touch = config.BUTTON_EMOJI_SWITCH_POS
+                            elif event['action'] == 'click_abc_btn':
+                                active_touch = config.BUTTON_ABC_SWITCH_POS
+                    else:
+                        break
+                        
+                return {
+                    'is_typing': True, 
+                    'current_text': current_text, 
+                    'active_char': active_char,
+                    'active_touch': active_touch,
+                    'kb_mode': current_kb_mode
+                }
+        return {'is_typing': False, 'current_text': "", 'active_char': None, 'active_touch': None, 'kb_mode': 'text'}
 
     initial_group_name = script_data.get('group_info', {}).get('name', 'Group')
     initial_participants = list(script_data['participants'].keys())
 
     def get_current_chat_state(t):
-        """
-        פונקציה שמחשבת את המצב הנוכחי (שם קבוצה, משתתפים) על בסיס הזמן t
-        והפעולות (actions) שקרו בהודעות מערכת עד אותו זמן.
-        """
         current_name = initial_group_name
         current_members = initial_participants[:] 
 

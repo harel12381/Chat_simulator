@@ -4,7 +4,6 @@ import math
 from PIL import Image, ImageDraw
 from bidi.algorithm import get_display
 from . import config, utils
-# הוספת הייבוא של Pilmoji
 from pilmoji import Pilmoji
 
 def safe_color(color):
@@ -40,21 +39,12 @@ def draw_tail(draw, x, y, bubble_w, color, is_left_side):
     c = safe_color(color)
     
     if is_left_side:
-        points = [
-            (x + 10, y),      
-            (x - 10, y),      
-            (x + 10, y + 20)  
-        ]
+        points = [(x + 10, y), (x - 10, y), (x + 10, y + 20)]
     else:
         right_edge = x + bubble_w
-        points = [
-            (right_edge - 10, y),  
-            (right_edge + 10, y),    
-            (right_edge - 10, y + 20) 
-        ]
+        points = [(right_edge - 10, y), (right_edge + 10, y), (right_edge - 10, y + 20)]
         
     draw.polygon(points, fill=c)
-
 
 def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
     bubble_w = 80
@@ -62,7 +52,6 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
     bg_color = safe_color(config.COLOR_BUBBLE_IN)
     
     draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=22, fill=bg_color)
-    
     draw_tail(draw, x, y, bubble_w, bg_color, is_left_side=False)
 
     dot_radius = 4
@@ -98,13 +87,11 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     sender_name = msg.get('sender', "")
     time_str = msg.get('timestamp', "")
     
-    # חישוב גובה שורה משוער לטובת Pilmoji
     sample_bbox = draw.textbbox((0, 0), "Aj", font=font_text)
     line_height = (sample_bbox[3] - sample_bbox[1]) + 6
 
     if msg.get('is_system'):
         font_text = utils.load_font(22, bold=True)
-        # עדכון גובה שורה לפונט מערכת
         sample_bbox_sys = draw.textbbox((0, 0), "Aj", font=font_text)
         line_height_sys = (sample_bbox_sys[3] - sample_bbox_sys[1]) + 6
         
@@ -142,13 +129,11 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         center_x = x + bubble_w / 2
         center_y = y + bubble_h / 2
         
-        # שימוש ב-Pilmoji אם יש תמונת יעד
         if img_target:
             with Pilmoji(img_target) as pilmoji:
                 total_text_h = len(wrapped_lines) * line_height_sys
                 start_y = center_y - (total_text_h / 2)
                 current_sys_y = start_y
-                
                 for line in wrapped_lines:
                     final_line = get_display(line, base_dir='R')
                     w = draw.textlength(final_line, font=font_text)
@@ -156,15 +141,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
                     pilmoji.text((line_x, current_sys_y), final_line, font=font_text, fill=safe_color(config.COLOR_TEXT_META))
                     current_sys_y += line_height_sys
         else:
-             # Fallback לשלב המדידה (למרות שלא מציירים)
-             draw.multiline_text(
-                (center_x, center_y), 
-                final_text, 
-                font=font_text, 
-                fill=safe_color(config.COLOR_TEXT_META), 
-                align='center', 
-                anchor="mm"
-            )
+             draw.multiline_text((center_x, center_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_META), align='center', anchor="mm")
         return bubble_h
     
     img_obj = None
@@ -185,25 +162,20 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
 
     text_w, text_h = 0, 0
     final_text = ""
-    wrapped_lines = [] # נשמור את השורות לציור עם Pilmoji
+    wrapped_lines = []
     
     if text_content:
         words = text_content.split(' ')
         current_line = []
-        
         for word in words:
             test_line = ' '.join(current_line + [word])
             w = draw.textlength(test_line, font=font_text)
-            
             if w <= config.MAX_BUBBLE_WIDTH:
                 current_line.append(word)
             else:
-                if current_line:
-                    wrapped_lines.append(' '.join(current_line))
+                if current_line: wrapped_lines.append(' '.join(current_line))
                 current_line = [word]
-        
-        if current_line:
-            wrapped_lines.append(' '.join(current_line))
+        if current_line: wrapped_lines.append(' '.join(current_line))
             
         display_text = "\n".join(wrapped_lines)
         final_text = get_display(display_text, base_dir='R')
@@ -224,18 +196,13 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     
     cursor_y = padding_top
     name_draw_y = cursor_y
-    
-    # הצגת שם: רק אם זה לא אני וגם זו לא הודעת המשך
     show_name = (not is_me) and (not is_continuation)
     
-    if show_name:
-        cursor_y += 22 + gap_name_content
-
+    if show_name: cursor_y += 22 + gap_name_content
     img_draw_y = cursor_y
     if img_obj:
         cursor_y += img_h
         if text_content: cursor_y += gap_img_text
-
     text_draw_y = cursor_y
     if text_content: cursor_y += text_h
     
@@ -257,8 +224,6 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     bubble_w, bubble_h = int(bubble_w), int(bubble_h)
     
     draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=22, fill=bg_color)
-    
-    # ציור זנב רק אם זו לא הודעת המשך
     if not is_continuation:
         draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
 
@@ -274,21 +239,16 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
 
     if text_content:
         text_draw_x = int(x + bubble_w - 15)
-        
         if img_target:
-            # שימוש ב-Pilmoji לציור אימוג'ים
             with Pilmoji(img_target) as pilmoji:
                 current_text_y_loop = y_pos + text_draw_y
                 for line in wrapped_lines:
                     final_line = get_display(line, base_dir='R')
                     w = draw.textlength(final_line, font=font_text)
-                    # יישור לימין ידני
                     line_x = text_draw_x - w
-                    
                     pilmoji.text((line_x, current_text_y_loop), final_line, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN))
                     current_text_y_loop += line_height
         else:
-            # Fallback למדידה
             draw.multiline_text((text_draw_x, y_pos + text_draw_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN), align='right', anchor="ra")
     
     draw.text((int(time_x), y_pos + meta_draw_y), time_str, font=font_time, fill=safe_color(config.COLOR_TEXT_META))
@@ -297,7 +257,11 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     
     return bubble_h
 
-def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, static_assets):
+def draw_keyboard_interface(img, draw, static_assets, current_text, typing_state):
+    kb_mode = typing_state.get('kb_mode', 'text')
+    active_char = typing_state.get('active_char')
+    active_touch = typing_state.get('active_touch') 
+    
     font_input = utils.load_font(30)
     line_height = 38 
     base_padding = 24
@@ -317,15 +281,11 @@ def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, 
         if test_width <= max_text_width_px:
             current_line_words.append(word)
         else:
-            if current_line_words:
-                wrapped_lines.append(' '.join(current_line_words))
+            if current_line_words: wrapped_lines.append(' '.join(current_line_words))
             current_line_words = [word] 
             
-    if current_line_words:
-        wrapped_lines.append(' '.join(current_line_words))
-        
-    if not wrapped_lines:
-        wrapped_lines = ["|"]
+    if current_line_words: wrapped_lines.append(' '.join(current_line_words))
+    if not wrapped_lines: wrapped_lines = ["|"]
 
     num_lines = len(wrapped_lines)
     calculated_height = (num_lines * line_height) + base_padding
@@ -334,6 +294,10 @@ def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, 
     kb_y = config.HEIGHT - config.KEYBOARD_HEIGHT
     input_y = kb_y - final_bar_height
     
+    keyboard_img = static_assets.get('keyboard')
+    if kb_mode == 'emoji' and static_assets.get('emoji_keyboard'):
+        keyboard_img = static_assets.get('emoji_keyboard')
+
     if keyboard_img:
         img.paste(keyboard_img, (0, kb_y))
     else:
@@ -347,42 +311,48 @@ def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, 
         button_center_y = input_y + (final_bar_height // 2)
         paste_x = 20
         paste_y = button_center_y - 25
-        
         img.paste(send_icon, (paste_x, int(paste_y)), send_icon)
 
     current_text_y = input_y + (base_padding // 2) - 2
     
-    # שימוש ב-Pilmoji לציור בתיבת הטקסט (כדי לראות אימוג'ים בזמן הקלדה)
     with Pilmoji(img) as pilmoji:
         for line in wrapped_lines:
             final_line = get_display(line, base_dir='R')
             w = draw.textlength(final_line, font=font_input)
-            
             text_x = config.WIDTH - 20 - w
             pilmoji.text((text_x, current_text_y), final_line, font=font_input, fill=(0,0,0))
-            
             current_text_y += line_height
 
-    if active_char:
+    if active_char and kb_mode == 'text':
         pos = utils.get_key_position(active_char)
         if pos:
             key_x, key_y_rel = pos
-            abs_key_y = kb_y + key_y_rel
             pop_w, pop_h = 60, 90
             pop_x = key_x - (pop_w // 2)
-            pop_y = abs_key_y - pop_h + 20 
+            pop_y = key_y_rel - pop_h + 20 
             
             draw.rounded_rectangle([(pop_x, pop_y), (pop_x + pop_w, pop_y + 60)], radius=10, fill=safe_color(config.COLOR_KEY_POPUP))
-            points = [(pop_x + 10, pop_y + 50), (pop_x + pop_w - 10, pop_y + 50), (key_x, abs_key_y)]
+            points = [(pop_x + 10, pop_y + 50), (pop_x + pop_w - 10, pop_y + 50), (key_x, key_y_rel)]
             draw.polygon(points, fill=safe_color(config.COLOR_KEY_POPUP))
             
             font_pop = utils.load_font(40, bold=True)
             char_display = get_display(active_char, base_dir='R')
             w = draw.textlength(char_display, font=font_pop)
             
-            # גם כאן כדאי להשתמש ב-pilmoji למקרה שהתו הנלחץ הוא אימוג'י
             with Pilmoji(img) as pilmoji:
                  pilmoji.text((pop_x + (pop_w-w)/2, pop_y + 5), char_display, font=font_pop, fill=safe_color(config.COLOR_KEY_POPUP_TEXT))   
+
+    elif active_touch:
+        tx, ty = active_touch
+        radius = 20
+        
+        overlay = Image.new('RGBA', img.size, (0,0,0,0))
+        d_overlay = ImageDraw.Draw(overlay)
+        
+        fill_col = config.COLOR_TOUCH_HIGHLIGHT 
+        d_overlay.ellipse((tx - radius, ty - radius, tx + radius, ty + radius), fill=fill_col)
+        
+        img.paste(Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB'), (0,0))
 
 def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets, chat_media, typing_state=None, current_group_name=None, current_group_members=None):
     img = Image.new("RGB", (config.WIDTH, config.HEIGHT), safe_color(config.COLOR_BG_SOLID))
@@ -397,7 +367,6 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
             typers.append(m['sender'])
     typers = list(set(typers)) 
     
-    # יצירת תמונת דמי למדידות ראשוניות (עבור חישוב גובה)
     temp_img = Image.new("RGB", (1,1)) 
     temp_draw = ImageDraw.Draw(temp_img)
     
@@ -407,26 +376,18 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     for i, msg in enumerate(visible_msgs):
         if msg.get('is_system') and i > 0:
             total_h += 15
-            
         is_continuation = False
         if i > 0:
             prev = visible_msgs[i-1]
             if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
                 is_continuation = True
 
-        # מעבירים את temp_img כדי שהמדידה תעבוד, אבל draw_bubble יזהה שזה מדידה
-        # הערה: בשלב המדידה לא קריטי אם pilmoji מצייר או לא, העיקר שיחזיר גובה.
-        # בקוד המעודכן, draw_bubble משתמש ב-img_target רק לציור בפועל,
-        # ולמדידה משתמש ב-draw הרגיל, אז זה בטוח.
         h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None, is_continuation=is_continuation)
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
+        if msg.get('is_system'): total_h += 15
         
-        if msg.get('is_system'):
-            total_h += 15
-        
-    if typers:
-        total_h += 50 + config.MESSAGE_SPACING
+    if typers: total_h += 50 + config.MESSAGE_SPACING
 
     bottom_margin = 20
     
@@ -438,14 +399,12 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         
         full_text = (current_text or "") + "|"
         words = full_text.split(' ')
-        
         wrapped_lines = []
         current_line_words = []
         
         for word in words:
             test_line = ' '.join(current_line_words + [word])
             test_width = temp_draw.textlength(get_display(test_line, base_dir='R'), font=font_input)
-            
             if test_width <= max_text_width_px:
                 current_line_words.append(word)
             else:
@@ -463,31 +422,24 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         bottom_margin += config.KEYBOARD_HEIGHT + final_bar_height
 
     visible_area = config.HEIGHT - config.HEADER_HEIGHT - bottom_margin
-
     top_margin = getattr(config, 'FIRST_MESSAGE_TOP_MARGIN', 20)
-    
-    if visible_msgs and visible_msgs[0].get('is_system'):
-        top_margin = 20
-
+    if visible_msgs and visible_msgs[0].get('is_system'): top_margin = 20
     start_y = config.HEADER_HEIGHT + top_margin
     
     if total_h > visible_area:
         start_y -= (total_h - visible_area)
 
     current_y = start_y
-    
     for i, msg in enumerate(visible_msgs):
         is_me = (msg['sender'] == my_name)
         msg_h = msg_heights[i]
-        
         is_continuation = False
         if i > 0:
             prev = visible_msgs[i-1]
             if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
                 is_continuation = True
 
-        if msg.get('is_system') and i > 0:
-            current_y += 15
+        if msg.get('is_system') and i > 0: current_y += 15
 
         if current_y + msg_h > config.HEADER_HEIGHT:
             ticks = config.COLOR_TICKS_GREY
@@ -499,7 +451,6 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                 if other_participants and other_participants.issubset(subsequent_senders):
                     ticks = config.COLOR_TICKS_BLUE
             
-            # כאן אנחנו מעבירים את img האמיתי, אז pilmoji יעבוד
             draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks, is_continuation=is_continuation)
             
             if not is_me and not msg.get('is_system'):
@@ -510,16 +461,13 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                         img.paste(avatar, (avatar_x, int(current_y)), avatar)
 
         current_y += msg_h + config.MESSAGE_SPACING
-        
-        if msg.get('is_system'):
-            current_y += 15
+        if msg.get('is_system'): current_y += 15
 
     if typers and current_y > config.HEADER_HEIGHT:
         typers_avatars = [participants_imgs.get(name) for name in typers if participants_imgs.get(name)]
         typing_x = config.WIDTH - 80 - config.PADDING - config.AVATAR_SIZE - 10
         draw_typing_bubble(img, draw, typing_x, current_y, t, typers_avatars)
 
-    # Header
     draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
     draw.rectangle([(0, config.HEADER_HEIGHT), (config.WIDTH, config.HEADER_HEIGHT + 2)], fill=(200, 200, 200))
     header_offset = 70 
@@ -528,9 +476,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     grp_name = get_display(header_name, base_dir='R')
     f_header = utils.load_font(33, bold=True)
     
-    # ציור שם הקבוצה עם Pilmoji למקרה שיש אימוג'י בשם
     with Pilmoji(img) as pilmoji:
-        # עוגן rs (Right Bottom/Baseline?) לא תמיד נתמך מושלם בpilmoji עם יישור, נצייר רגיל ונחשב מיקום
         w = draw.textlength(grp_name, font=f_header)
         pilmoji.text((config.WIDTH - 50 - header_offset - w, 50 - 33), grp_name, font=f_header, fill="white")
     
@@ -559,14 +505,12 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     draw_header_icons(img, draw, static_assets)
 
     if typing_state and typing_state['is_typing']:
-        kb_img = static_assets.get('keyboard')
         draw_keyboard_interface(
             img, 
             draw, 
-            kb_img, 
+            static_assets, 
             typing_state['current_text'], 
-            typing_state['active_char'],
-            static_assets
+            typing_state
         )
 
     return np.array(img)
