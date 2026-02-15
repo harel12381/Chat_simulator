@@ -130,9 +130,16 @@ def render_frame(t, script, participants_imgs, group_info, my_name, bg_img, stat
             ticks = config.COLOR_TICKS_GREY
             if is_me:
                 if i < len(visible_msgs) - 1:
-                    ticks = config.COLOR_TICKS_BLUE
-                else:
-                    ticks = config.COLOR_TICKS_GREY
+                    all_participants = set(participants_imgs.keys())
+                    other_participants = all_participants - {my_name}
+                
+                    subsequent_msgs = visible_msgs[i+1:]
+                    subsequent_senders = {m['sender'] for m in subsequent_msgs}
+
+                    if other_participants.issubset(subsequent_senders):
+                        ticks = config.COLOR_TICKS_BLUE
+                    else:
+                        ticks = config.COLOR_TICKS_GREY
             
             draw_bubble(draw, msg, is_me, current_y, ticks)
             
