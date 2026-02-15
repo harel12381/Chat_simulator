@@ -1,34 +1,69 @@
 # 📱 WhatsApp Chat & Video Call Simulator
 
-A realistic, customizable WhatsApp simulation engine designed to stage fake chat scenarios and video calls. This project focuses on **linear message flows** (scripted events) rather than fully functional conversations, making it perfect for creating pranks, demo videos, or UI mockups.
+A highly realistic, Python-based engine to generate fake WhatsApp chat videos and linear video call simulations. Designed for content creators, prank videos, and UI mockups, this tool creates pixel-perfect animations based on a simple JSON script.
 
 ## 🚀 Key Features
 
-* **Scripted Chat Flow:** Messages appear automatically based on a JSON timeline (no backend required).
-* **multimedia Support:** Simulates sending/receiving text, images, and audio messages.
-* **Fake Video Call Trigger:** Seamlessly transitions from chat to a simulated video call overlay.
-    * *Background:* Plays a pre-recorded video file.
-    * *Foreground:* Shows the user's real camera feed (picture-in-picture).
-* **Realistic Audio:** Includes WhatsApp-style sounds for typing, sent, delivered, and incoming calls.
-* **Data-Driven Architecture:** "Fake" content (profiles, photos, scripts) is completely separated from the app's source code.
+* **Realistic UI:** Replicates the WhatsApp interface with precision (Header, Bubbles, Ticks, Time).
+* **Smart Typing Simulation:** Automatically generates realistic typing animations and sounds before messages appear.
+* **Multimedia Support:** Send text messages, images (with rounded corners!), and simulates audio messages.
+* **Video Call Mode:** Seamless transition from chat to a "fake" incoming video call overlay.
+* **Hebrew/RTL Support:** Full support for Right-to-Left languages (Hebrew/Arabic) using `python-bidi`.
+* **Customizable Header:** Dynamic group name, participant list (hides "myself" automatically), and icons.
+* **No Backend Required:** Runs entirely locally using Python.
 
-## 📂 Project Structure
+## 🛠️ Installation
 
-The project strictly separates **Application Assets** (static UI resources) from **Simulation Data** (customizable scenarios).
+1.  **Clone the repository** (or download the files).
+2.  **Install dependencies**:
+    This project relies on `MoviePy`, `Pillow`, and `python-bidi`.
+    ```bash
+    pip install -r requirements.txt
+    ```
+    *(Note: Ensure you have ImageMagick installed if required by MoviePy on your system).*
 
-```text
-WHATSAPP_CHAT_SIMULATOR/
-├── assets/                     # 🎨 Static UI Resources (Icons, Fonts, Sounds)
-│   ├── images/                 # Standard WhatsApp icons (mic, camera, checks)
-│   └── sounds/                 # System sounds (pop.mp3, ringtone.mp3)
-│
-├── data/                       # 🎭 USER DATA (The "Script")
-│   ├── profiles/               # Avatars for fake users (mom.jpg, boss.jpg)
-│   ├── chat_media/             # Images/Videos sent inside the chat
-│   └── scripts/                # JSON files defining the message timing
-│
-├── src/                        # 🛠️ Source Code
-│   ├── components/             # Reusable UI (MessageBubble, ChatHeader)
-│   ├── screens/                # Main Views (ActiveChat, VideoCall)
-│   └── utils/                  # Logic (SoundManager, TimeParser)
-└── App.js
+## 🎬 How to Use
+
+### 1. Setup Your Assets
+Place your media files in the `data/` folder:
+* **Profile Pictures:** `data/profiles/` (e.g., `mom.jpg`, `me.jpg`).
+* **Chat Images:** `data/chat_media/` (images sent inside the chat).
+
+### 2. Write the Script (`data/script.json`)
+Edit the `data/script.json` file to define the conversation flow.
+
+**Example Structure:**
+```json
+{
+  "scenario_name": "Family Chat",
+  "my_name": "Daniel",
+  "group_info": {
+    "name": "משפחה",
+    "image": "profiles/group_icon.png"
+  },
+  "participants": {
+    "Daniel": "profiles/me.jpg",
+    "Mom": "profiles/mom.jpg",
+    "Dad": "profiles/dad.jpg"
+  },
+  "messages": [
+    {
+      "time": 1,
+      "text": "הקבוצה 'משפחה' נוצרה",
+      "is_system": true
+    },
+    {
+      "time": 3,
+      "sender": "Mom",
+      "text": "מתי אתה מגיע?",
+      "timestamp": "19:00"
+    },
+    {
+      "time": 7,
+      "sender": "Daniel",
+      "text": "תראו איזה נוף!",
+      "image": "chat_media/nature.jpg",
+      "timestamp": "19:03"
+    }
+  ]
+}
