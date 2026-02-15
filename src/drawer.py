@@ -35,19 +35,42 @@ def draw_header_icons(img, draw, static_assets):
         img.paste(v_icon, (110, 28), v_icon)
 
 def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None):
-    """
-    גרסה מתוקנת: חישוב גובה ליניארי (Stacking) להבטחת מרווחים אחידים.
-    """
     font_text = utils.load_font(config.FONT_SIZE_TEXT)
     font_time = utils.load_font(config.FONT_SIZE_TIME)
     font_name = utils.load_font(config.FONT_SIZE_NAME, bold=True)
     
     text_content = msg.get('text', "")
     image_key = msg.get('image')
-    sender_name = msg['sender']
-    time_str = msg['timestamp']
+    sender_name = msg.get('sender', "")
+    time_str = msg.get('timestamp', "")
     
-    # 1. הכנת התמונה (מדידה ושינוי גודל)
+    if msg.get('is_system'):
+        avg_char_width = max(1, draw.textlength("a", font=font_text))
+        chars_per_line = int((config.WIDTH * 0.85) / avg_char_width)
+        wrapped_lines = textwrap.wrap(text_content, width=chars_per_line)
+        display_text = "\n".join(wrapped_lines)
+        final_text = get_display(display_text, base_dir='R')
+        
+        bbox = draw.multiline_textbbox((0, 0), final_text, font=font_text, align='center')
+        text_w = bbox[2] - bbox[0]
+        text_h = bbox[3] - bbox[1]
+        
+        bubble_w = text_w + 30
+        bubble_h = text_h + 16
+        
+        x = (config.WIDTH - bubble_w) // 2
+        y = int(y_pos)
+        
+        sys_color = getattr(config, 'COLOR_SYSTEM_BG', (225, 245, 254))
+        draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=10, fill=safe_color(sys_color))
+        
+        text_x = x + (bubble_w - text_w) / 2
+        text_y = y + 8
+        
+        draw.multiline_text((x + bubble_w / 2, text_y), final_text, font=font_text, fill=(0,0,0), align='center', anchor="ma")
+        
+        return bubble_h
+
     img_obj = None
     img_w, img_h = 0, 0
     
@@ -59,7 +82,6 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         img_h = int(raw_img.height * ratio)
         img_obj = raw_img.resize((img_w, img_h))
 
-    # 2. הכנת הטקסט (מדידה)
     text_w, text_h = 0, 0
     final_text = ""
     
@@ -74,59 +96,47 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
 
-    # 3. חישוב רוחב הבועה (Bubble Width)
     time_w = draw.textlength(time_str, font=font_time)
     
     content_w = 0
     if img_obj:
-        content_w = max(content_w, img_w + 10) # 5px padding each side
+        content_w = max(content_w, img_w + 10)
     if text_content:
-        content_w = max(content_w, text_w + 30) # 15px padding each side
+        content_w = max(content_w, text_w + 30)
         
     bubble_w = max(content_w, time_w + 40)
-    
-    # 4. חישוב גובה ומיקומים אנכיים (Stacking Logic)
-    # אנו צוברים את הגובה למשתנה cursor_y
     
     padding_top = 10
     padding_bottom = 12
     gap_name_content = 5
-    gap_img_text = 8      # רווח קבוע בין תמונה לטקסט
-    gap_content_meta = 10 # רווח קבוע בין תוכן (טקסט/תמונה) לשעה
+    gap_img_text = 8
+    gap_content_meta = 10
     
-    cursor_y = padding_top # מתחילים מלמעלה
+    cursor_y = padding_top
     
-    # מיקום שם השולח
     name_draw_y = cursor_y
     if not is_me:
-        cursor_y += 22 # גובה גופן משוער לשם
+        cursor_y += 22
         cursor_y += gap_name_content
 
-    # מיקום תמונה
     img_draw_y = cursor_y
     if img_obj:
         cursor_y += img_h
-        # אם יש גם טקסט, נוסיף רווח ביניהם
         if text_content:
             cursor_y += gap_img_text
 
-    # מיקום טקסט
     text_draw_y = cursor_y
     if text_content:
         cursor_y += text_h
     
-    # הוספת הרווח הקבוע לפני השעה
     cursor_y += gap_content_meta
     
-    # מיקום שעה
     meta_draw_y = cursor_y
-    cursor_y += 18 # גובה שורה של השעה
+    cursor_y += 18
     cursor_y += padding_bottom
     
-    # גובה סופי
     bubble_h = cursor_y
     
-    # 5. חישוב X וציור הרקע
     if is_me:
         x = config.PADDING
         bg_color = safe_color(config.COLOR_BUBBLE_OUT)
@@ -139,31 +149,23 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     x, y_pos = int(x), int(y_pos)
     bubble_w, bubble_h = int(bubble_w), int(bubble_h)
     
-    # ציור הרקע
     draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=15, fill=bg_color)
     
-    # 6. ציור האלמנטים לפי המיקומים שחישבנו
-    
-    # שם השולח
     if not is_me:
         final_sender = get_display(sender_name, base_dir='R')
         name_w = draw.textlength(final_sender, font=font_name)
         name_x = int(x + bubble_w - name_w - 15)
-        # מוסיפים את y_pos למיקום היחסי
         draw.text((name_x, y_pos + name_draw_y), final_sender, font=font_name, fill="orange")
 
-    # תמונה
     if img_obj:
         img_x = x + 5
         if img_target:
             img_target.paste(img_obj, (img_x, int(y_pos + img_draw_y)), img_obj)
 
-    # טקסט
     if text_content:
         text_draw_x = int(x + bubble_w - 15)
         draw.multiline_text((text_draw_x, y_pos + text_draw_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN), align='right', anchor="ra")
     
-    # שעה ו-V
     draw.text((int(time_x), y_pos + meta_draw_y), time_str, font=font_time, fill=safe_color(config.COLOR_TEXT_META))
     
     if is_me and ticks_color:
