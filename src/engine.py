@@ -14,6 +14,8 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     bg_img = None
     if os.path.exists(assets_paths['background']):
         bg_img = PIL.Image.open(assets_paths['background']).convert("RGBA").resize((config.WIDTH, config.HEIGHT))
+        overlay = PIL.Image.new('RGBA', bg_img.size, (240, 242, 245, 200)) # המספר 200 הוא רמת השקיפות
+        bg_img = PIL.Image.alpha_composite(bg_img, overlay).convert("RGB")
     else:
         print(f"Warning: Background image not found at {assets_paths['background']}")
 

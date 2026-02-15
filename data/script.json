@@ -11,7 +11,7 @@
     "אבא": "profiles/dad.jpg"
   },
   "messages": [
-    {"time": 1,"text": "הקבוצה 'משפחה' נוצרה","is_system": true,"sender": "","timestamp": ""},
+    {"time": 1,"text": "הקבוצה 'משפגכעגעגדגהדכדכדגכדכדגחה' נוצרה","is_system": true,"sender": "","timestamp": ""},
     {"time": 3, "sender": "אמא", "text": "מתי אתה מגיע?", "timestamp": "19:00"},
     {"time": 3.5, "sender": "אבא", "text": "סע בזהירות!", "timestamp": "19:00"},
     {"time": 4.5, "sender": "Daniel", "text": "עוד 10 דקות", "timestamp": "19:01"},

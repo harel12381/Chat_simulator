@@ -1,16 +1,15 @@
 import os
 from PIL import Image, ImageDraw, ImageFont
 from bidi.algorithm import get_display
+from numpy import size
 from . import config
 
 def load_font(size, bold=False):
-    font_names = ["arialbd.ttf" if bold else "arial.ttf", "DejaVuSans.ttf"]
-    for name in font_names:
-        try:
-            return ImageFont.truetype(name, size)
-        except IOError:
-            continue
-    return ImageFont.load_default()
+    font_name = "assets/fonts/Heebo.ttf" if bold else "assets/fonts/Rubik.ttf"
+    try:
+        return ImageFont.truetype(font_name, size)
+    except IOError:
+        return ImageFont.truetype("arial.ttf", size)
 
 def process_text(text):
     return get_display(text, base_dir='R')

@@ -59,7 +59,7 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
     bubble_h = 50
     bg_color = safe_color(config.COLOR_BUBBLE_IN)
     
-    draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=15, fill=bg_color)
+    draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=22, fill=bg_color)
     
     draw_tail(draw, x, y, bubble_w, bg_color, is_left_side=False)
 
@@ -85,6 +85,7 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
             img_target.paste(avatar, (cur_x, int(y)), avatar)
 
     return bubble_h
+
 def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None):
     font_text = utils.load_font(config.FONT_SIZE_TEXT)
     font_time = utils.load_font(config.FONT_SIZE_TIME)
@@ -96,7 +97,9 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     time_str = msg.get('timestamp', "")
     
     if msg.get('is_system'):
+        # טעינת פונט מעט קטן יותר אם צריך, או השארת הקיים
         font_text = utils.load_font(22, bold=True)
+        
         words = text_content.split(' ')
         wrapped_lines = []
         current_line = []
@@ -119,18 +122,31 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         
-        bubble_w = text_w + 30
-        bubble_h = text_h + 16
+        # --- כאן השינוי: הגדלת הריפוד (Padding) ---
+        bubble_w = text_w + 60  # יותר רווח בצדדים
+        bubble_h = text_h + 25  # יותר רווח למעלה ולמטה
+        
         x = (config.WIDTH - bubble_w) // 2
         y = int(y_pos)
         
-        sys_color = getattr(config, 'COLOR_SYSTEM_BG', (225, 245, 254))
-        draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=10, fill=safe_color(sys_color))
-        text_x = x + (bubble_w - text_w) / 2
-        text_y = y + 8 
-        draw.multiline_text((x + bubble_w / 2, text_y), final_text, font=font_text, fill=(0,0,0), align='center', anchor="ma")
+        sys_color = getattr(config, 'COLOR_SYSTEM_BG', (255, 229, 204))
+        # רדיוס מעט גדול יותר לבועה
+        draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=12, fill=safe_color(sys_color))
+        
+        # --- מירכוז מדויק עם anchor='mm' ---
+        center_x = x + bubble_w / 2
+        center_y = y + bubble_h / 2
+        
+        draw.multiline_text(
+            (center_x, center_y), 
+            final_text, 
+            font=font_text, 
+            fill=safe_color(config.COLOR_TEXT_META), # שימוש בצבע אפור כהה במקום שחור מלא (יותר מודרני)
+            align='center', 
+            anchor="mm"
+        )
         return bubble_h
-
+    
     img_obj = None
     img_w, img_h = 0, 0
     if image_key and chat_media and image_key in chat_media:
@@ -216,7 +232,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     x, y_pos = int(x), int(y_pos)
     bubble_w, bubble_h = int(bubble_w), int(bubble_h)
     
-    draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=15, fill=bg_color)
+    draw.rounded_rectangle([(x, y_pos), (x + bubble_w, y_pos + bubble_h)], radius=22, fill=bg_color)
     
     draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
 
@@ -412,8 +428,9 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                 if avatar:
                     avatar_x = config.WIDTH - config.PADDING - config.AVATAR_SIZE
                     img.paste(avatar, (avatar_x, int(current_y)), avatar)
-                    
-        current_y += msg_h + config.MESSAGE_SPACING
+
+        extra_margin = 15 if msg.get('is_system') else 0
+        current_y += msg_h + config.MESSAGE_SPACING + extra_margin
 
     if typers and current_y > config.HEADER_HEIGHT:
         typers_avatars = [participants_imgs.get(name) for name in typers if participants_imgs.get(name)]
@@ -422,28 +439,27 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
 
     # Header
     draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
+    draw.rectangle([(0, config.HEADER_HEIGHT), (config.WIDTH, config.HEADER_HEIGHT + 2)], fill=(200, 200, 200))
     header_offset = 70 
     grp_name = get_display(group_info['name'], base_dir='R')
     f_header = utils.load_font(33, bold=True)
-    draw.text((config.WIDTH - 80 - header_offset, 50), grp_name, font=f_header, fill="white", anchor="rs")
+    draw.text((config.WIDTH - 50 - header_offset, 50), grp_name, font=f_header, fill="white", anchor="rs")
     
     display_participants = [name for name in participants_imgs.keys() if name != my_name]
     parts_txt = ", ".join(display_participants)    
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
     parts_display = get_display(parts_txt, base_dir='R')
     f_sub = utils.load_font(18)
-    draw.text((config.WIDTH - 80 - header_offset, 78), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
+    draw.text((config.WIDTH - 50 - header_offset, 78), parts_display, font=f_sub, fill=(200,200,200), anchor="rs")
     
     if group_avatar:
-        dest_x = config.WIDTH - 70 - header_offset
+        dest_x = config.WIDTH - 30 - header_offset
         img.paste(group_avatar, (dest_x, 25), group_avatar)
     else:
-        draw.ellipse((config.WIDTH - 70 - header_offset, 25, config.WIDTH - 20 - header_offset, 75), fill=(200,200,200))
+        draw.ellipse((config.WIDTH - 30 - header_offset, 25, config.WIDTH - 20 - header_offset, 75), fill=(200,200,200))
 
     back_color = (255, 255, 255)
     draw.line([(config.WIDTH - 35, 35), (config.WIDTH - 20, 50), (config.WIDTH - 35, 65)], fill=back_color, width=3)
-    font_back = utils.load_font(28) 
-    draw.text((config.WIDTH - 45, 50), "4", font=font_back, fill=back_color, anchor="rm")
     draw_header_icons(img, draw, static_assets)
 
     if typing_state and typing_state['is_typing']:
