@@ -106,7 +106,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         is_me = (msg['sender'] == my_name)
         text = msg.get('text', "")
         
-        if is_me and text:
+        if is_me and text and not msg.get('is_system'):
             avg_time_per_char = 0.12
             total_duration = max(len(text) * avg_time_per_char, 1.0)
             
@@ -156,9 +156,9 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
 
         last_msg_end_time = msg['time']
         
-        if is_me and sound_sent:
+        if is_me and sound_sent and not msg.get('is_system'):
             audio_clips.append(sound_sent.set_start(msg['time']))
-        elif not is_me and sound_received:
+        elif not is_me and sound_received and not msg.get('is_system'):
             audio_clips.append(sound_received.set_start(msg['time']))
 
     def get_typing_state(t):
@@ -174,10 +174,44 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 return {'is_typing': True, 'current_text': current_text, 'active_char': active_char}
         return {'is_typing': False, 'current_text': "", 'active_char': None}
 
+    initial_group_name = script_data.get('group_info', {}).get('name', 'Group')
+    initial_participants = list(script_data['participants'].keys())
+
+    def get_current_chat_state(t):
+        """
+        פונקציה שמחשבת את המצב הנוכחי (שם קבוצה, משתתפים) על בסיס הזמן t
+        והפעולות (actions) שקרו בהודעות מערכת עד אותו זמן.
+        """
+        current_name = initial_group_name
+        current_members = initial_participants[:] 
+
+        for msg in script_data['messages']:
+            if msg['time'] > t:
+                break
+            
+            if msg.get('is_system') and msg.get('action'):
+                action = msg.get('action')
+                val = msg.get('value')
+                
+                if action == 'change_subject' and val:
+                    current_name = val
+                
+                elif action == 'add_participant' and val:
+                    if val not in current_members:
+                        current_members.append(val)
+                
+                elif action == 'remove_participant' and val:
+                    if val in current_members:
+                        current_members.remove(val)
+        
+        return current_name, current_members
+
     final_duration = last_msg_end_time + 3
     
     def make_frame(t):
         t_state = get_typing_state(t)
+        cur_grp_name, cur_grp_members = get_current_chat_state(t)
+        
         return drawer.render_frame(
             t, 
             script_data['messages'], 
@@ -188,7 +222,9 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
             bg_img,
             static_assets,
             chat_media,
-            t_state
+            t_state,
+            current_group_name=cur_grp_name,
+            current_group_members=cur_grp_members
         )
 
     clip = VideoClip(make_frame, duration=final_duration)

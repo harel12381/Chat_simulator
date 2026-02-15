@@ -97,7 +97,6 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     time_str = msg.get('timestamp', "")
     
     if msg.get('is_system'):
-        # טעינת פונט מעט קטן יותר אם צריך, או השארת הקיים
         font_text = utils.load_font(22, bold=True)
         
         words = text_content.split(' ')
@@ -122,18 +121,15 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         text_w = bbox[2] - bbox[0]
         text_h = bbox[3] - bbox[1]
         
-        # --- כאן השינוי: הגדלת הריפוד (Padding) ---
-        bubble_w = text_w + 60  # יותר רווח בצדדים
-        bubble_h = text_h + 25  # יותר רווח למעלה ולמטה
+        bubble_w = text_w + 60 
+        bubble_h = text_h + 25 
         
         x = (config.WIDTH - bubble_w) // 2
         y = int(y_pos)
         
         sys_color = getattr(config, 'COLOR_SYSTEM_BG', (255, 229, 204))
-        # רדיוס מעט גדול יותר לבועה
         draw.rounded_rectangle([(x, y), (x + bubble_w, y + bubble_h)], radius=12, fill=safe_color(sys_color))
         
-        # --- מירכוז מדויק עם anchor='mm' ---
         center_x = x + bubble_w / 2
         center_y = y + bubble_h / 2
         
@@ -141,7 +137,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
             (center_x, center_y), 
             final_text, 
             font=font_text, 
-            fill=safe_color(config.COLOR_TEXT_META), # שימוש בצבע אפור כהה במקום שחור מלא (יותר מודרני)
+            fill=safe_color(config.COLOR_TEXT_META), 
             align='center', 
             anchor="mm"
         )
@@ -338,7 +334,7 @@ def draw_keyboard_interface(img, draw, keyboard_img, current_text, active_char, 
             w = draw.textlength(char_display, font=font_pop)
             draw.text((pop_x + (pop_w-w)/2, pop_y + 5), char_display, font=font_pop, fill=safe_color(config.COLOR_KEY_POPUP_TEXT))   
 
-def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets, chat_media, typing_state=None):
+def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets, chat_media, typing_state=None, current_group_name=None, current_group_members=None):
     img = Image.new("RGB", (config.WIDTH, config.HEIGHT), safe_color(config.COLOR_BG_SOLID))
     if bg_img: img.paste(bg_img, (0,0))
     draw = ImageDraw.Draw(img)
@@ -357,10 +353,16 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     total_h = 0
     msg_heights = []
     
-    for msg in visible_msgs:
+    for i, msg in enumerate(visible_msgs):
+        if msg.get('is_system') and i > 0:
+            total_h += 15
+
         h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None)
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
+        
+        if msg.get('is_system'):
+            total_h += 15
         
     if typers:
         total_h += 50 + config.MESSAGE_SPACING
@@ -400,8 +402,14 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         bottom_margin += config.KEYBOARD_HEIGHT + final_bar_height
 
     visible_area = config.HEIGHT - config.HEADER_HEIGHT - bottom_margin
+
+    top_margin = getattr(config, 'FIRST_MESSAGE_TOP_MARGIN', 20)
     
-    start_y = config.HEADER_HEIGHT + 20
+    if visible_msgs and visible_msgs[0].get('is_system'):
+        top_margin = 20
+
+    start_y = config.HEADER_HEIGHT + top_margin
+    
     if total_h > visible_area:
         start_y -= (total_h - visible_area)
 
@@ -411,14 +419,17 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         is_me = (msg['sender'] == my_name)
         msg_h = msg_heights[i]
 
+        if msg.get('is_system') and i > 0:
+            current_y += 15
+
         if current_y + msg_h > config.HEADER_HEIGHT:
             ticks = config.COLOR_TICKS_GREY
             if is_me:
-                all_participants = set(participants_imgs.keys())
-                other_participants = all_participants - {my_name}
+                active_participants = set(current_group_members) if current_group_members is not None else set(participants_imgs.keys())
+                other_participants = active_participants - {my_name}
                 subsequent_msgs = visible_msgs[i+1:]
                 subsequent_senders = {m['sender'] for m in subsequent_msgs}
-                if other_participants.issubset(subsequent_senders):
+                if other_participants and other_participants.issubset(subsequent_senders):
                     ticks = config.COLOR_TICKS_BLUE
             
             draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks)
@@ -429,8 +440,10 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                     avatar_x = config.WIDTH - config.PADDING - config.AVATAR_SIZE
                     img.paste(avatar, (avatar_x, int(current_y)), avatar)
 
-        extra_margin = 15 if msg.get('is_system') else 0
-        current_y += msg_h + config.MESSAGE_SPACING + extra_margin
+        current_y += msg_h + config.MESSAGE_SPACING
+        
+        if msg.get('is_system'):
+            current_y += 15
 
     if typers and current_y > config.HEADER_HEIGHT:
         typers_avatars = [participants_imgs.get(name) for name in typers if participants_imgs.get(name)]
@@ -441,11 +454,17 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     draw.rectangle([(0, 0), (config.WIDTH, config.HEADER_HEIGHT)], fill=safe_color(config.COLOR_HEADER))
     draw.rectangle([(0, config.HEADER_HEIGHT), (config.WIDTH, config.HEADER_HEIGHT + 2)], fill=(200, 200, 200))
     header_offset = 70 
-    grp_name = get_display(group_info['name'], base_dir='R')
+    
+    header_name = current_group_name if current_group_name else group_info['name']
+    grp_name = get_display(header_name, base_dir='R')
     f_header = utils.load_font(33, bold=True)
     draw.text((config.WIDTH - 50 - header_offset, 50), grp_name, font=f_header, fill="white", anchor="rs")
     
-    display_participants = [name for name in participants_imgs.keys() if name != my_name]
+    if current_group_members is not None:
+        display_participants = [name for name in current_group_members if name != my_name]
+    else:
+        display_participants = [name for name in participants_imgs.keys() if name != my_name]
+        
     parts_txt = ", ".join(display_participants)    
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
     parts_display = get_display(parts_txt, base_dir='R')
