@@ -359,11 +359,11 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     if bg_img: img.paste(bg_img, (0,0))
     draw = ImageDraw.Draw(img)
     
-    visible_msgs = [m for m in script if m['time'] <= t]
+    visible_msgs = [m for m in script if m['appearance_time'] <= t]
     
     typers = []
     for m in script:
-        if t < m['time'] <= (t + 1.0) and m['sender'] != my_name and not m.get('is_system'):
+        if t < m['appearance_time'] <= (t + 1.0) and m['sender'] != my_name and not m.get('is_system'):
             typers.append(m['sender'])
     typers = list(set(typers)) 
     

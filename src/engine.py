@@ -106,8 +106,8 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     my_name = script_data['my_name']
 
     for msg in script_data['messages']:
-        if msg['time'] < last_msg_end_time + 0.5:
-             msg['time'] = last_msg_end_time + 1.0
+        if msg['appearance_time'] < last_msg_end_time + 0.5:
+             msg['appearance_time'] = last_msg_end_time + 1.0
 
         is_me = (msg['sender'] == my_name)
         text = msg.get('text', "")
@@ -137,16 +137,16 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
             
             total_duration = sum(a['duration'] for a in actions_sequence)
             
-            ideal_start_time = msg['time'] - total_duration
+            ideal_start_time = msg['appearance_time'] - total_duration
             earliest_possible_start = last_msg_end_time + 0.5
             
             if ideal_start_time < earliest_possible_start:
                 actual_start = earliest_possible_start
                 actual_end = actual_start + total_duration
-                msg['time'] = actual_end
+                msg['appearance_time'] = actual_end
             else:
                 actual_start = ideal_start_time
-                actual_end = msg['time']
+                actual_end = msg['appearance_time']
 
             char_events = []
             current_t = actual_start
@@ -158,7 +158,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 char = action['char']
                 
                 event_data = {
-                    'time': current_t,
+                    'appearance_time': current_t,
                     'duration': action['duration'],
                     'action': action_type,
                     'char': char,
@@ -188,12 +188,12 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 'schedule': char_events
             })
 
-        last_msg_end_time = msg['time']
+        last_msg_end_time = msg['appearance_time']
         
         if is_me and sound_sent and not msg.get('is_system'):
-            audio_clips.append(sound_sent.set_start(msg['time']))
+            audio_clips.append(sound_sent.set_start(msg['appearance_time']))
         elif not is_me and sound_received and not msg.get('is_system'):
-            audio_clips.append(sound_received.set_start(msg['time']))
+            audio_clips.append(sound_received.set_start(msg['appearance_time']))
 
     def get_typing_state(t):
         for group in typing_events:
@@ -204,7 +204,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 active_char = None 
                 
                 for event in group['schedule']:
-                    if t >= event['time']:
+                    if t >= event['appearance_time']:
                         if event['action'] in ['type_text', 'type_emoji']:
                              current_text += event['char']
                         
@@ -215,7 +215,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                         elif event['kb_mode_at_start'] == 'emoji':
                             current_kb_mode = 'emoji'
 
-                        time_since_event = t - event['time']
+                        time_since_event = t - event['appearance_time']
                         if 0 <= time_since_event < 0.15:
                             if event['action'] == 'type_text':
                                 active_char = event['char']
@@ -244,13 +244,13 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         initial_participants = group_info['initial_members']
     else:
         initial_participants = list(script_data['participants'].keys())
-        
+
     def get_current_chat_state(t):
         current_name = initial_group_name
         current_members = initial_participants[:] 
 
         for msg in script_data['messages']:
-            if msg['time'] > t:
+            if msg['appearance_time'] > t:
                 break
             
             if msg.get('is_system') and msg.get('action'):

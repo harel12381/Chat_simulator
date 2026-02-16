@@ -14,7 +14,7 @@
   },
   "messages": [
       {
-        "time": 1,
+        "appearance_time": 1,
         "sender": "אבא",
         "text": "הוספת את נועה",
         "is_system": true,
@@ -22,7 +22,7 @@
         "value": "נועה" 
       },
             {
-        "time": 1,
+        "appearance_time": 1,
         "sender": "נועה",
         "text": "הוספת את נועה"
       }
