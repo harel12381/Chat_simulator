@@ -481,11 +481,15 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         pilmoji.text((config.WIDTH - 50 - header_offset - w, 50 - 33), grp_name, font=f_header, fill="white")
     
     if current_group_members is not None:
-        display_participants = [name for name in current_group_members if name != my_name]
+        base_list = current_group_members
     else:
-        display_participants = [name for name in participants_imgs.keys() if name != my_name]
+        base_list = list(participants_imgs.keys())
+
+    display_participants = ["את/ה"]
+
+    display_participants.extend([name for name in base_list if name != my_name])
         
-    parts_txt = ", ".join(display_participants)    
+    parts_txt = ", ".join(display_participants)   
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
     parts_display = get_display(parts_txt, base_dir='R')
     f_sub = utils.load_font(18)
