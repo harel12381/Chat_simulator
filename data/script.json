@@ -1,111 +1,30 @@
 {
-  "scenario_name": "Family Trip Drama",
+  "scenario_name": "Family Trip",
   "my_name": "אמא",
   "group_info": {
     "name": "המשפחה",
-    "image": "profiles/family_trip.jpg"
+    "image": "profiles/family_trip.jpg",
+    "initial_members": ["אמא", "אבא", "דניאל"]
   },
   "participants": {
     "דניאל": "profiles/me.jpg",
     "אמא": "profiles/mom.jpg",
     "אבא": "profiles/dad.jpg",
-    "נועה": "profiles/sister.jpg"
+    "נועה": "profiles/sister.jpg" 
   },
   "messages": [
-    {
-      "time": 1,
-      "text": "הקבוצה 'המשפחה' נוצרה",
-      "is_system": true,
-      "sender": "",
-      "timestamp": ""
-    },
-    {
-      "time": 2,
-      "sender": "אמא",
-      "text": "טוב חברים, סגרתי מלון באילת!🌴",
-      "image": "chat_media/my_img.jpg",
-      "timestamp": "20:00"
-    },
-    {
-      "time": 3,
-      "sender": "דניאל",
-      "text": "יששש! מתי יוצאים?",
-      "timestamp": "20:00"
-    },    
-    {
-      "time": 5,
-      "sender": "דניאל",
-      "text": "יששש! מתי יוצאים?",
-      "timestamp": "20:00"
-    },
-    {
-      "time": 6,
-      "sender": "אבא",
-      "text": "יוצאים ב-04:00 בבוקר כדי לא לעמוד בפקקים.",
-      "timestamp": "20:01"
-    },
-    {
-      "time": 7,
-      "sender": "אבא",
-      "text": "אבא שינה את נושא הקבוצה ל'מבצע אילת 2026'",
-      "is_system": true,
-      "action": "change_subject",
-      "value": "מבצע אילת 2026",
-      "timestamp": "20:01"
-    },
-    {
-      "time": 9,
-      "sender": "נועה",
-      "text": "מה 4 בבוקר?! השתגעתם? 😴",
-      "timestamp": "20:02"
-    },
-    {
-      "time": 11,
-      "sender": "אבא",
-      "text": "מי שלא קם נשאר בבית. זה מבצע צבאי.",
-      "timestamp": "20:02"
-    },
-    {
-      "time": 13,
-      "sender": "נועה",
-      "text": "אז אני נשארת בבית. ביי.",
-      "timestamp": "20:03"
-    },
-    {
-      "time": 14,
-      "sender": "נועה",
-      "text": "נועה יצא/ה מהקבוצה",
-      "is_system": true,
-      "action": "remove_participant",
-      "value": "נועה",
-      "timestamp": "20:03"
-    },
-    {
-      "time": 16,
-      "sender": "אמא",
-      "text": "נו באמת... דניאל תחזיר אותה🤦‍♀️",
-      "timestamp": "20:04"
-    },
-    {
-      "time": 18,
-      "sender": "דניאל",
-      "text": "הוספת את נועה",
-      "is_system": true,
-      "action": "add_participant",
-      "value": "נועה",
-      "timestamp": "20:05"
-    },
-    {
-      "time": 20,
-      "sender": "נועה",
-      "text": "טוב בסדר... אני אקום 😒",
-      "timestamp": "20:05"
-    },
-    {
-      "time": 22,
-      "sender": "דניאל",
-      "text": "יאללה יהיה כיף!",
-      "timestamp": "20:06"
-    }
+      {
+        "time": 1,
+        "sender": "אבא",
+        "text": "הוספת את נועה",
+        "is_system": true,
+        "action": "add_participant", 
+        "value": "נועה" 
+      },
+            {
+        "time": 1,
+        "sender": "נועה",
+        "text": "הוספת את נועה"
+      }
   ]
 }

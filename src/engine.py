@@ -239,8 +239,12 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         return {'is_typing': False, 'current_text': "", 'active_char': None, 'active_touch': None, 'kb_mode': 'text'}
 
     initial_group_name = script_data.get('group_info', {}).get('name', 'Group')
-    initial_participants = list(script_data['participants'].keys())
-
+    group_info = script_data.get('group_info', {})
+    if 'initial_members' in group_info:
+        initial_participants = group_info['initial_members']
+    else:
+        initial_participants = list(script_data['participants'].keys())
+        
     def get_current_chat_state(t):
         current_name = initial_group_name
         current_members = initial_participants[:] 
