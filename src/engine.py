@@ -20,9 +20,17 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         print(f"Warning: Background image not found at {assets_paths['background']}")
 
     participants_imgs = {}
+    participants_colors = {} 
     default_avatar_path = assets_paths['default_avatar']
     
-    for name, relative_path in script_data['participants'].items():
+    for name, data in script_data['participants'].items():
+        if isinstance(data, dict):
+            relative_path = data.get('image')
+            if 'color' in data:
+                participants_colors[name] = data['color']
+        else:
+            relative_path = data
+            
         full_path = os.path.join(data_dir_path, relative_path)
         if not os.path.exists(full_path):
              full_path = os.path.join(data_dir_path, 'profiles', os.path.basename(relative_path))
@@ -288,7 +296,8 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
             chat_media,
             t_state,
             current_group_name=cur_grp_name,
-            current_group_members=cur_grp_members
+            current_group_members=cur_grp_members,
+            participants_colors=participants_colors
         )
 
     clip = VideoClip(make_frame, duration=final_duration)

@@ -5,6 +5,27 @@ from PIL import Image, ImageDraw
 from bidi.algorithm import get_display
 from . import config, utils
 from pilmoji import Pilmoji
+import hashlib
+
+DEFAULT_NAME_COLORS = [
+    (229, 66, 163), 
+    (31, 122, 196), 
+    (214, 47, 47),  
+    (21, 142, 21),  
+    (229, 172, 43), 
+    (156, 39, 176), 
+    (96, 125, 139), 
+    (255, 87, 34)   
+]
+
+def get_name_color(name, custom_colors):
+    if name in custom_colors:
+        c = custom_colors[name]
+        return safe_color(c)
+    
+    hash_val = int(hashlib.sha256(name.encode('utf-8')).hexdigest(), 16)
+    color_index = hash_val % len(DEFAULT_NAME_COLORS)
+    return DEFAULT_NAME_COLORS[color_index]
 
 def safe_color(color):
     if isinstance(color, str): return color
@@ -77,7 +98,7 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
 
     return bubble_h
 
-def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None, is_continuation=False):
+def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None, is_continuation=False, name_color=None):
     font_text = utils.load_font(config.FONT_SIZE_TEXT)
     font_time = utils.load_font(config.FONT_SIZE_TIME)
     font_name = utils.load_font(config.FONT_SIZE_NAME, bold=True)
@@ -231,8 +252,9 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         final_sender = get_display(sender_name, base_dir='R')
         name_w = draw.textlength(final_sender, font=font_name)
         name_x = int(x + bubble_w - name_w - 15)
-        draw.text((name_x, y_pos + name_draw_y), final_sender, font=font_name, fill="orange")
-
+        final_color = name_color if name_color else "orange"
+        draw.text((name_x, y_pos + name_draw_y), final_sender, font=font_name, fill=final_color)
+    
     if img_obj and img_target:
         img_paste_x = x + (bubble_w - img_w) // 2
         img_target.paste(img_obj, (int(img_paste_x), int(y_pos + img_draw_y)), img_obj)
@@ -354,7 +376,7 @@ def draw_keyboard_interface(img, draw, static_assets, current_text, typing_state
         
         img.paste(Image.alpha_composite(img.convert('RGBA'), overlay).convert('RGB'), (0,0))
 
-def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets, chat_media, typing_state=None, current_group_name=None, current_group_members=None):
+def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name, bg_img, static_assets, chat_media, typing_state=None, current_group_name=None, current_group_members=None, participants_colors=None):
     img = Image.new("RGB", (config.WIDTH, config.HEIGHT), safe_color(config.COLOR_BG_SOLID))
     if bg_img: img.paste(bg_img, (0,0))
     draw = ImageDraw.Draw(img)
@@ -382,7 +404,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
             if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
                 is_continuation = True
 
-        h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None, is_continuation=is_continuation)
+        h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None, is_continuation=is_continuation, name_color=participants_colors.get(msg['sender']) if participants_colors else None)
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
         if msg.get('is_system'): total_h += 15
@@ -451,8 +473,12 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                 if other_participants and other_participants.issubset(subsequent_senders):
                     ticks = config.COLOR_TICKS_BLUE
             
-            draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks, is_continuation=is_continuation)
+            sender_color = "orange"
+            if not is_me and participants_colors is not None:
+                sender_color = get_name_color(msg['sender'], participants_colors)
             
+            draw_bubble(img, draw, msg, is_me, current_y, chat_media, ticks, is_continuation=is_continuation, name_color=sender_color)      
+
             if not is_me and not msg.get('is_system'):
                 if not is_continuation:
                     avatar = participants_imgs.get(msg['sender'])

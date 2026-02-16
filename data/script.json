@@ -7,10 +7,17 @@
     "initial_members": ["אמא", "אבא", "דניאל"]
   },
   "participants": {
-    "דניאל": "profiles/me.jpg",
-    "אמא": "profiles/mom.jpg",
-    "אבא": "profiles/dad.jpg",
-    "נועה": "profiles/sister.jpg" 
+    "דניאל": "profiles/me.jpg", 
+    "אמא": { 
+        "image": "profiles/mom.jpg"
+    },
+    "אבא": {
+        "image": "profiles/dad.jpg",
+        "color": "#1F7AC4"
+    },
+    "נועה": {
+        "image": "profiles/sister.jpg"
+    }
   },
   "messages": [
       {
@@ -23,6 +30,16 @@
       },
             {
         "appearance_time": 1,
+        "sender": "נועה",
+        "text": "הוספת את נועה"
+      },
+                  {
+        "appearance_time": 2,
+        "sender": "דניאל",
+        "text": "הוספת את נועה"
+      },
+                        {
+        "appearance_time": 2,
         "sender": "נועה",
         "text": "הוספת את נועה"
       }
