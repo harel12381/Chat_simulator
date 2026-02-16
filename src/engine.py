@@ -110,31 +110,56 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     typing_events = [] 
     audio_clips = [] 
     
-    last_msg_end_time = 0 
+    max_time_reached = 0 
     my_name = script_data['my_name']
+    
+    participants_last_end = {}
+    previous_msg_time = -1    
+    
+    group_info = script_data.get('group_info', {})
+    if 'initial_members' in group_info:
+        current_active_participants = set(group_info['initial_members'])
+    else:
+        current_active_participants = set(script_data['participants'].keys())
+    
+    current_active_participants.add(my_name)
 
-    for msg in script_data['messages']:
-        if msg['appearance_time'] < last_msg_end_time + 0.5:
-             msg['appearance_time'] = last_msg_end_time + 1.0
+    for i, msg in enumerate(script_data['messages']):
+        sender = msg.get('sender', 'Unknown')
+        current_time = msg['appearance_time']
+        
+        if current_time < previous_msg_time:
+            print(f"\n⚠️  CRITICAL WARNING: Message order mismatch at index {i}!")
+            print(f"   Message from '{sender}' appears at {current_time}s,")
+            print(f"   but the previous message appeared at {previous_msg_time}s.")
+            print(f"   -> Visual bug guaranteed. Please sort your JSON.\n")
+        previous_msg_time = current_time
+
+        if not msg.get('is_system'):
+            if sender not in current_active_participants:
+                print(f"\n👻 GHOST MESSAGE WARNING: '{sender}' is sending a message but is NOT in the group!")
+                print(f"   Time: {current_time}s. Text: '{msg.get('text', '')[:15]}...'")
+                print(f"   -> Did you forget to add them to 'initial_members' or via 'add_participant'?\n")
+
+        if current_time > max_time_reached:
+            max_time_reached = current_time
 
         is_me = (msg['sender'] == my_name)
         text = msg.get('text', "")
         
+        calculated_duration = 0
+        
         if is_me and text and not msg.get('is_system'):
             actions_sequence = []
             current_mode = 'text'
-            
             for char in text:
                 is_em = utils.is_emoji(char)
-                
                 if is_em and current_mode == 'text':
                     actions_sequence.append({'type': 'click_emoji_btn', 'char': None, 'duration': 0.4})
                     current_mode = 'emoji'
-                
                 elif not is_em and current_mode == 'emoji':
                     actions_sequence.append({'type': 'click_abc_btn', 'char': None, 'duration': 0.4})
                     current_mode = 'text'
-                
                 if current_mode == 'emoji':
                     actions_sequence.append({'type': 'type_emoji', 'char': char, 'duration': 0.6}) 
                 else:
@@ -143,58 +168,41 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                     dur = random.uniform(base_dur * 0.8, base_dur * 1.2)
                     actions_sequence.append({'type': 'type_text', 'char': char, 'duration': dur})
             
-            total_duration = sum(a['duration'] for a in actions_sequence)
+            calculated_duration = sum(a['duration'] for a in actions_sequence)
             
             if 'typing_duration' in msg:
                 target_duration = float(msg['typing_duration'])
-                if total_duration > 0:
-                    speed_factor = target_duration / total_duration
+                if calculated_duration > 0:
+                    speed_factor = target_duration / calculated_duration
                     for action in actions_sequence:
                         action['duration'] *= speed_factor
-                    
-                    total_duration = target_duration
+                    calculated_duration = target_duration
             
-            ideal_start_time = msg['appearance_time'] - total_duration
-            earliest_possible_start = last_msg_end_time + 0.5
+            actual_end = current_time
+            actual_start = actual_end - calculated_duration
             
-            if ideal_start_time < earliest_possible_start:
-                actual_start = earliest_possible_start
-                actual_end = actual_start + total_duration
-                msg['appearance_time'] = actual_end
-            else:
-                actual_start = ideal_start_time
-                actual_end = msg['appearance_time']
-
             char_events = []
             current_t = actual_start
-            current_typed_str = ""
             active_kb_mode = 'text'
             
             for action in actions_sequence:
                 action_type = action['type']
-                char = action['char']
-                
                 event_data = {
                     'appearance_time': current_t,
                     'duration': action['duration'],
                     'action': action_type,
-                    'char': char,
+                    'char': action['char'],
                     'kb_mode_at_start': active_kb_mode
                 }
+                if action_type == 'click_emoji_btn': active_kb_mode = 'emoji'
+                elif action_type == 'click_abc_btn': active_kb_mode = 'text'
                 
-                if action_type == 'click_emoji_btn':
-                    active_kb_mode = 'emoji'
-                elif action_type == 'click_abc_btn':
-                    active_kb_mode = 'text'
-                elif action_type in ['type_text', 'type_emoji']:
-                    current_typed_str += char
-                    
                 if typing_sounds and action_type in ['type_text', 'type_emoji']:
                     chosen_sound = random.choice(typing_sounds)
                     clip_len = min(0.1, action['duration']) 
                     clip = chosen_sound.subclip(0, clip_len).set_start(current_t)
                     audio_clips.append(clip)
-                
+
                 char_events.append(event_data)
                 current_t += action['duration']
 
@@ -205,12 +213,38 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 'schedule': char_events
             })
 
-        last_msg_end_time = msg['appearance_time']
-        
+        else:
+            if not msg.get('is_system'):
+                calculated_duration = msg.get('typing_duration', 1.0)
+                actual_end = current_time
+                actual_start = actual_end - calculated_duration
+
+        if not msg.get('is_system'):
+            last_end = participants_last_end.get(sender, 0)
+            if actual_start < last_end:
+                overlap = last_end - actual_start
+                print(f"\n⚠️  WARNING: OVERLAP DETECTED for '{sender}'!")
+                print(f"   Message: '{text[:15]}...'")
+                print(f"   Prev msg ended at {last_end:.2f}s, This starts at {actual_start:.2f}s")
+                print(f"   -> SUGGESTION: Delay appearance_time by {overlap:.2f}s.\n")
+            
+            if actual_start < 0:
+                 print(f"\n⚠️  WARNING: Message starts before 0s ('{sender}'). Needs more time.\n")
+
+            participants_last_end[sender] = actual_end
+            
+        if msg.get('is_system'):
+            action = msg.get('action')
+            val = msg.get('value')
+            if action == 'add_participant' and val:
+                current_active_participants.add(val)
+            elif action == 'remove_participant' and val:
+                current_active_participants.discard(val)
+
         if is_me and sound_sent and not msg.get('is_system'):
-            audio_clips.append(sound_sent.set_start(msg['appearance_time']))
+            audio_clips.append(sound_sent.set_start(current_time))
         elif not is_me and sound_received and not msg.get('is_system'):
-            audio_clips.append(sound_received.set_start(msg['appearance_time']))
+            audio_clips.append(sound_received.set_start(current_time))
 
     def get_typing_state(t):
         for group in typing_events:
@@ -287,7 +321,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         
         return current_name, current_members
 
-    final_duration = last_msg_end_time + 3
+    final_duration = max_time_reached + 3    
     
     def make_frame(t):
         t_state = get_typing_state(t)

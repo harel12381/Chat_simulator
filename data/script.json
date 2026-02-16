@@ -29,25 +29,24 @@
         "value": "נועה" 
       },
             {
-        "appearance_time": 1,
+        "appearance_time": 1.5,
         "sender": "נועה",
         "text": "הוספת את נועה"
       },
                   {
-        "appearance_time": 2,
+        "appearance_time": 2.5,
         "sender": "דניאל",
         "text": "הוספת את נועה"
       },
                         {
-        "appearance_time": 2,
+        "appearance_time": 3,
         "sender": "נועה",
         "text": "הוספת את נועה"
       },
       {
-      "appearance_time": 5,
+      "appearance_time": 3,
       "sender": "אמא",
       "text": "אני מקלידה את זה ממש לאט...",
-      "typing_duration": 8.0, 
       "image": "..." 
     },
     {
