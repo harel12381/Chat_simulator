@@ -42,6 +42,19 @@
         "appearance_time": 2,
         "sender": "נועה",
         "text": "הוספת את נועה"
-      }
+      },
+      {
+      "appearance_time": 5,
+      "sender": "אמא",
+      "text": "אני מקלידה את זה ממש לאט...",
+      "typing_duration": 8.0, 
+      "image": "..." 
+    },
+    {
+      "appearance_time": 12,
+      "sender": "דניאל",
+      "text": "אני עונה מהר!",
+      "typing_duration": 0.5
+    }
   ]
 }

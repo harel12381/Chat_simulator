@@ -385,8 +385,14 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     
     typers = []
     for m in script:
-        if t < m['appearance_time'] <= (t + 1.0) and m['sender'] != my_name and not m.get('is_system'):
+        if m['sender'] == my_name or m.get('is_system'):
+            continue
+            
+        t_duration = m.get('typing_duration', 1.0)
+
+        if (m['appearance_time'] - t_duration) <= t < m['appearance_time']:
             typers.append(m['sender'])
+            
     typers = list(set(typers)) 
     
     temp_img = Image.new("RGB", (1,1)) 

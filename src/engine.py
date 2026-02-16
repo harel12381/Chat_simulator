@@ -145,6 +145,15 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
             
             total_duration = sum(a['duration'] for a in actions_sequence)
             
+            if 'typing_duration' in msg:
+                target_duration = float(msg['typing_duration'])
+                if total_duration > 0:
+                    speed_factor = target_duration / total_duration
+                    for action in actions_sequence:
+                        action['duration'] *= speed_factor
+                    
+                    total_duration = target_duration
+            
             ideal_start_time = msg['appearance_time'] - total_duration
             earliest_possible_start = last_msg_end_time + 0.5
             
