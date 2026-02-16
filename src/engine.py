@@ -24,6 +24,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     default_avatar_path = assets_paths['default_avatar']
     
     for name, data in script_data['participants'].items():
+        relative_path = None
         if isinstance(data, dict):
             relative_path = data.get('image')
             if 'color' in data:
@@ -31,11 +32,16 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
         else:
             relative_path = data
             
-        full_path = os.path.join(data_dir_path, relative_path)
-        if not os.path.exists(full_path):
-             full_path = os.path.join(data_dir_path, 'profiles', os.path.basename(relative_path))
+        final_path = default_avatar_path
+        
+        if relative_path:
+            full_path = os.path.join(data_dir_path, relative_path)
+            if not os.path.exists(full_path):
+                 full_path = os.path.join(data_dir_path, 'profiles', os.path.basename(relative_path))
             
-        final_path = full_path if os.path.exists(full_path) else default_avatar_path
+            if os.path.exists(full_path):
+                final_path = full_path
+        
         participants_imgs[name] = utils.get_circular_avatar(final_path)
 
     group_img_path = script_data.get('group_info', {}).get('image')
@@ -69,7 +75,6 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
     if os.path.exists(assets_paths['phone_icon']):
          static_assets['phone_icon'] = PIL.Image.open(assets_paths['phone_icon']).resize((40,40))
     
-    # טעינת שתי המקלדות
     keyboard_path = assets_paths.get('keyboard_image') or os.path.join(assets_paths['base_assets_dir'], 'images', 'keyboard.png')
     if os.path.exists(keyboard_path):
         static_assets['keyboard'] = PIL.Image.open(keyboard_path).convert("RGBA").resize((config.WIDTH, config.KEYBOARD_HEIGHT))
