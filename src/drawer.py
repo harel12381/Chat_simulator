@@ -474,7 +474,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     
     header_name = current_group_name if current_group_name else group_info['name']
     grp_name = get_display(header_name, base_dir='R')
-    f_header = utils.load_font(33, bold=True)
+    f_header = utils.load_font(config.FONT_SIZE_HEADER, bold=True)
     
     with Pilmoji(img) as pilmoji:
         w = draw.textlength(grp_name, font=f_header)
