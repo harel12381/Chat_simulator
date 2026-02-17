@@ -108,3 +108,40 @@ During generation, the engine will print yellow warnings for the following cases
 * **Time Travel:** If the order of messages in the JSON does not match their `appearance_time`.
 
 **Recommendation:** Always monitor the terminal output to ensure your script timings are logical!
+
+**Example Snippet:**
+```json
+{
+  "scenario_name": "Quick Catch-up",
+  "my_name": "Alex",
+  "group_info": {
+    "name": "Group",
+    "image": "profiles/Group.jpg",
+    "initial_members": ["Jordan"]
+   },
+  "participants": {
+    "Alex": { "image": "profiles/me.jpg" },
+    "Jordan": { "color": "#1F7AC4" },
+    "Sam": { }
+  },
+  "messages": [
+    {
+      "appearance_time": 1,
+      "sender": "Alex",
+      "text": "Project Group Created",
+      "is_system": true
+    },
+    {
+      "appearance_time": 3,
+      "sender": "Jordan",
+      "text": "Check out the new logo!",
+      "image": "chat_media/logo.jpg"
+    },
+    {
+      "appearance_time": 6,
+      "sender": "Alex",
+      "text": "Looks great! Typing the feedback now...",
+      "typing_duration": 1.5
+    }
+  ]
+}
