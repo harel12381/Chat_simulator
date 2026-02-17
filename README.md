@@ -136,6 +136,7 @@ During generation, the engine will print yellow warnings for the following cases
       "sender": "Jordan",
       "text": "Check out the new logo!",
       "image": "chat_media/logo.jpg"
+      "timestamp": "10:00"
     },
     {
       "appearance_time": 6,
