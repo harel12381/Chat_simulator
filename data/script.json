@@ -1,59 +1,73 @@
 {
-  "scenario_name": "Family Trip",
+  "scenario_name": "תיאום טיול משפחתי",
   "my_name": "אמא",
   "group_info": {
-    "name": "המשפחה",
+    "name": "הטיול לצפון",
     "image": "profiles/family_trip.jpg",
     "initial_members": ["אמא", "אבא", "דניאל"]
   },
   "participants": {
-    "דניאל": "profiles/me.jpg", 
-    "אמא": { 
-        "image": "profiles/mom.jpg"
+    "דניאל": {
+      "image": "profiles/me.jpg",
+      "color": "#1F7AC4"
+    },
+    "אמא": {
+      "image": "profiles/mom.jpg"
     },
     "אבא": {
-        "image": "profiles/dad.jpg",
-        "color": "#1F7AC4"
+      "image": "profiles/dad.jpg",
+      "color": "#E91E63"
     },
-    "נועה": {
-        "image": "profiles/sister.jpg"
-    }
+    "נועה": { }
   },
   "messages": [
-      {
-        "appearance_time": 1,
-        "sender": "אבא",
-        "text": "הוספת את נועה",
-        "is_system": true,
-        "action": "add_participant", 
-        "value": "נועה" 
-      },
-            {
-        "appearance_time": 1.5,
-        "sender": "נועה",
-        "text": "הוספת את נועה"
-      },
-                  {
-        "appearance_time": 2.5,
-        "sender": "דניאל",
-        "text": "הוספת את נועה"
-      },
-                        {
-        "appearance_time": 3,
-        "sender": "נועה",
-        "text": "הוספת את נועה"
-      },
-      {
-      "appearance_time": 3,
+    {
+      "appearance_time": 1,
       "sender": "אמא",
-      "text": "אני מקלידה את זה ממש לאט...",
-      "image": "..." 
+      "text": "יצרת את הקבוצה 'הטיול לצפון'",
+      "is_system": true
     },
     {
-      "appearance_time": 12,
+      "appearance_time": 3,
+      "sender": "אמא",
+      "text": "היי כולם, מוכנים לטיול?",
+      "timestamp": "10:00"
+    },
+    {
+      "appearance_time": 6,
+      "sender": "אבא",
+      "text": "הוספת את נועה",
+      "is_system": true,
+      "action": "add_participant",
+      "value": "נועה"
+    },
+    {
+      "appearance_time": 9,
+      "sender": "נועה",
+      "text": "היי! תודה שהוספתם אותי 😊",
+      "timestamp": "10:02"
+    },
+    {
+      "appearance_time": 13,
       "sender": "דניאל",
-      "text": "אני עונה מהר!",
-      "typing_duration": 0.5
+      "text": "תראו איזה מלון מצאתי לנו!",
+      "image": "chat_media/my_img.jpg",
+      "timestamp": "10:05"
+    },
+    {
+      "appearance_time": 16,
+      "sender": "אבא",
+      "text": "שינית את נושא הקבוצה ל-'סופ\"ש בצפון'",
+      "is_system": true,
+      "action": "change_subject",
+      "value": "סופ\"ש בצפון"
+    },
+    {
+      "appearance_time": 20,
+      "sender": "אמא",
+      "text": "אני מקלידה הודעה ארוכה אבל ממש מהר...",
+      "typing_duration": 0.8,
+      "timestamp": "10:07"
     }
   ]
 }
