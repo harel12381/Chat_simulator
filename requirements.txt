@@ -3,3 +3,4 @@ numpy
 Pillow
 python-bidi
 pilmoji
+streamlit
