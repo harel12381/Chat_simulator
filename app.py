@@ -10,8 +10,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
 DEFAULT_AVATAR_PATH = os.path.join(ASSETS_DIR, 'images', 'default_avatar.png')
 
-st.set_page_config(page_title="WhatsApp Video Maker Pro", layout="wide")
-st.title("🎬 WhatsApp Video Maker Pro")
+st.set_page_config(page_title="WhatsApp Video Maker", layout="wide")
+st.title("🎬 WhatsApp Video Maker")
 
 if 'participants' not in st.session_state:
     st.session_state.participants = {}
@@ -39,7 +39,6 @@ def save_uploaded_file(uploaded_file):
     return file_path
 
 def recalculate_times():
-    """Recalculate message timestamps based on Delay"""
     current_time = 0.0
     for msg in st.session_state.messages:
         delay = msg.get('delay', 2.0)
@@ -179,7 +178,7 @@ def add_message_callback():
          pass 
 
 with st.sidebar:
-    st.header("1. Settings & Participants")
+    st.header("Settings & Participants")
     
     with st.expander("Group Settings", expanded=True):
         group_name = st.text_input("Group Name", "")
@@ -262,7 +261,7 @@ with st.sidebar:
     )
     final_initial_members_list = [my_name] + other_initial_members
 
-st.header("2. Build the Chat")
+st.header("Build the Chat")
 
 is_edit_mode = st.session_state.edit_index is not None
 form_title = "✏️ Edit Message" if is_edit_mode else "➕ Add New Event"
@@ -390,7 +389,10 @@ if st.session_state.messages:
         t_val = msg.get('appearance_time', 0.0)
         t_str = f"{t_val:.1f}s"
         
-        display_time_str = f" | 🕒 {msg['timestamp']}" if msg.get('timestamp') else ""
+        display_time_str = f"🕒 {msg['timestamp']}" if msg.get('timestamp') else ""
+        typing_info = ""
+        if msg.get("typing_duration"):
+             typing_info = f"(⏳ {msg['typing_duration']}s)"
         
         if st.session_state.edit_index == i:
             st.markdown("👇 **You are currently editing this message:**")
@@ -398,16 +400,27 @@ if st.session_state.messages:
         col_content, col_actions = st.columns([15, 2], vertical_alignment="center")
         
         with col_content:
-            typing_info = ""
-            if msg.get("typing_duration"):
-                 typing_info = f" (⏳ {msg['typing_duration']}s)"
-
             if msg.get('is_system'):
-                st.info(f"⚙️ [{t_str}] {msg['text']}{display_time_str}")
+                border_color = "rgba(13, 202, 240, 0.5)" 
+                bg_color = "rgba(13, 202, 240, 0.1)"
+                icon = "⚙️"
+                content_html = f"<strong>System</strong>: {msg['text']}"
             elif msg.get('image'):
-                st.warning(f"📷 [{t_str}] {msg['sender']} sent an image{typing_info}{display_time_str}")
+                border_color = "rgba(255, 193, 7, 0.5)"
+                bg_color = "rgba(255, 193, 7, 0.1)"
+                icon = "📷"
+                content_html = f"<strong>{msg['sender']}</strong> sent an image"
+                if msg.get('text'):
+                    content_html += f"<br><em style='font-size:0.9em; opacity:0.8'>{msg['text']}</em>"
             else:
-                st.success(f"💬 [{t_str}] {msg['sender']}: {msg['text']}{typing_info}{display_time_str}")
+                border_color = "rgba(25, 135, 84, 0.5)"
+                bg_color = "rgba(25, 135, 84, 0.1)"
+                icon = "💬"
+                content_html = f"<strong>{msg['sender']}</strong>: {msg['text']}"
+
+            html_card = f"""<div style="border: 1px solid {border_color}; background-color: {bg_color}; border-radius: 8px; padding: 12px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 5px; width: 100%;"><div style="flex-grow: 1; margin-right: 15px; font-size: 16px;">{icon} {content_html}</div><div style="text-align: right; font-size: 13px; color: rgba(255, 255, 255, 0.6); min-width: 90px; line-height: 1.4; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;"><span>⏱️ {t_str}</span><br>{display_time_str} {typing_info}</div></div>"""
+            
+            st.markdown(html_card, unsafe_allow_html=True)
         
         with col_actions:
             c_edit, c_del = st.columns([1, 1], gap="small")
