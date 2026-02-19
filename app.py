@@ -1,6 +1,7 @@
 import streamlit as st
 import os
 import tempfile
+import base64
 from src.engine import generate_video
 import sys
 
@@ -9,6 +10,72 @@ sys.dont_write_bytecode = True
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ASSETS_DIR = os.path.join(BASE_DIR, 'assets')
 DEFAULT_AVATAR_PATH = os.path.join(ASSETS_DIR, 'images', 'default_avatar.png')
+
+st.markdown("""
+<style>
+/* Thumbnail Image (Small) */
+.chat-img-thumb {
+    height: 50px;
+    width: auto;
+    border-radius: 5px;
+    cursor: zoom-in;
+    margin-left: 10px;
+    border: 1px solid rgba(0,0,0,0.1);
+    transition: transform 0.2s;
+    display: block; /* Fix spacing */
+}
+.chat-img-thumb:hover {
+    opacity: 0.9;
+    transform: scale(1.05);
+}
+
+/* The Hidden Checkbox (Controls the state) */
+.zoom-chk {
+    display: none;
+}
+
+/* The Overlay (Hidden by default, shown when checked) */
+.zoom-overlay {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(0,0,0,0.85);
+    z-index: 99999;
+    justify-content: center;
+    align-items: center;
+    cursor: zoom-out;
+}
+
+/* Logic: When checkbox is checked, show the overlay sibling */
+.zoom-chk:checked + .zoom-overlay {
+    display: flex;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+/* The Large Image inside Overlay */
+.zoom-img-large {
+    max-width: 90%;
+    max-height: 90%;
+    border-radius: 8px;
+    box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    cursor: zoom-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Layout Tweaks */
+.chat-bubble-container {
+    position: relative;
+    margin-bottom: 15px; /* Added spacing between messages */
+}
+</style>
+""", unsafe_allow_html=True)
 
 st.set_page_config(page_title="WhatsApp Video Maker", layout="wide")
 st.title("🎬 WhatsApp Video Maker")
@@ -29,6 +96,14 @@ if 'uploader_key_participant' not in st.session_state:
     st.session_state.uploader_key_participant = 0
 if 'uploader_key_chat' not in st.session_state:
     st.session_state.uploader_key_chat = 1000
+
+def get_image_base64(path):
+    """Helper to convert image to base64 for HTML embedding"""
+    if not path or not os.path.exists(path):
+        return None
+    with open(path, "rb") as image_file:
+        encoded_string = base64.b64encode(image_file.read()).decode()
+    return f"data:image/jpeg;base64,{encoded_string}"
 
 def save_uploaded_file(uploaded_file):
     if uploaded_file is None:
@@ -83,45 +158,35 @@ def add_message_callback():
         "timestamp": display_time 
     }
     
-    if msg_type == "Text Message":
-        text_content = st.session_state.get("msg_text_content", "")
-        use_custom_duration = st.session_state.get("chk_text", False)
-        typing_dur = st.session_state.get("num_text", 1.0)
+    if msg_type == "Regular Message":
+        text_content = st.session_state.get("msg_content", "")
         
-        if text_content:
-            final_msg_data = base_data.copy()
-            final_msg_data["text"] = text_content
-            
-            if use_custom_duration:
-                final_msg_data["typing_duration"] = typing_dur
-            
-            st.session_state.msg_text_content = ""
-
-    elif msg_type == "Image":
         img_key = f"chat_img_{st.session_state.uploader_key_chat}"
         img_file = st.session_state.get(img_key)
-        caption = st.session_state.get("img_caption", "")
-        use_custom_duration = st.session_state.get("chk_img", False)
-        typing_dur = st.session_state.get("num_img", 1.0)
         
         image_path = None
         if img_file:
             image_path = save_uploaded_file(img_file)
+            should_reset_chat_uploader = True
         elif st.session_state.edit_index is not None:
             old_msg = st.session_state.messages[st.session_state.edit_index]
-            if old_msg.get('image'):
+            if old_msg.get('image') and not old_msg.get('is_system'):
                 image_path = old_msg['image']
         
-        if image_path:
+        use_custom_duration = st.session_state.get("chk_duration", False)
+        typing_dur = st.session_state.get("num_duration", 1.0)
+        
+        if text_content or image_path:
             final_msg_data = base_data.copy()
-            final_msg_data["text"] = caption
-            final_msg_data["image"] = image_path
+            final_msg_data["text"] = text_content
+            
+            if image_path:
+                final_msg_data["image"] = image_path
             
             if use_custom_duration:
                 final_msg_data["typing_duration"] = typing_dur
             
-            st.session_state.img_caption = ""
-            should_reset_chat_uploader = True
+            st.session_state.msg_content = ""
 
     elif msg_type == "System Message":
         action_type = st.session_state.get("sys_action_type")
@@ -174,7 +239,7 @@ def add_message_callback():
             
         recalculate_times()
     
-    elif msg_type == "Image" and not final_msg_data and st.session_state.edit_index is None:
+    elif msg_type == "Regular Message" and not final_msg_data and st.session_state.edit_index is None:
          pass 
 
 with st.sidebar:
@@ -282,7 +347,7 @@ if is_edit_mode:
     default_display_time = edit_msg_data.get('timestamp', '')
     
     if edit_msg_data.get('is_system'):
-        default_type = 2
+        default_type = 1 
         default_text = edit_msg_data.get('text', '')
         act = edit_msg_data.get('action')
         if act == 'add_participant': default_sys_action_idx = 0
@@ -291,9 +356,6 @@ if is_edit_mode:
         else: default_sys_action_idx = 3
         default_sys_value = edit_msg_data.get('value', '')
         
-    elif edit_msg_data.get('image'):
-        default_type = 1
-        default_text = edit_msg_data.get('text', '')
     else:
         default_type = 0
         default_text = edit_msg_data.get('text', '')
@@ -312,7 +374,7 @@ with st.container(border=True):
             st.session_state.edit_index = None
             st.rerun()
 
-    msg_type_options = ["Text Message", "Image", "System Message"]
+    msg_type_options = ["Regular Message", "System Message"]
     msg_type = st.radio("Message Type:", msg_type_options, index=default_type, horizontal=True, key="msg_type_radio")
     
     c1, c2, c3 = st.columns([2, 1, 1])
@@ -323,8 +385,14 @@ with st.container(border=True):
     with c3:
         st.text_input("Display Time (e.g. 12:30)", value=default_display_time, key="msg_display_time")
 
-    if msg_type == "Text Message":
-        st.text_input("Message Content", value=default_text if default_type==0 else "", key="msg_text_content")
+    if msg_type == "Regular Message":
+        
+        if is_edit_mode and default_type == 0 and edit_msg_data.get('image'):
+            st.info(f"🖼️ Current Image: {os.path.basename(edit_msg_data['image'])}")
+
+        st.file_uploader("Image (Optional)", type=['jpg', 'png', 'jpeg'], key=f"chat_img_{st.session_state.uploader_key_chat}")
+        
+        st.text_input("Message Content / Caption", value=default_text if default_type==0 else "", key="msg_content")
         
         def_typing = False
         def_typing_val = 1.0
@@ -332,37 +400,18 @@ with st.container(border=True):
             def_typing = True
             def_typing_val = edit_msg_data["typing_duration"]
 
-        use_custom_duration = st.checkbox("Set manual typing duration?", value=def_typing, key="chk_text")
+        use_custom_duration = st.checkbox("Set typing/sending duration?", value=def_typing, key="chk_duration")
         if use_custom_duration:
-            st.number_input("Typing duration (seconds)", min_value=0.1, value=def_typing_val, key="num_text")
+            st.number_input("Duration (seconds)", min_value=0.1, value=def_typing_val, key="num_duration")
         
-        st.button(submit_label, on_click=add_message_callback)
-
-    elif msg_type == "Image":
-        if is_edit_mode and default_type == 1:
-            st.info(f"Current Image: {os.path.basename(edit_msg_data['image'])}")
-            
-        st.file_uploader("Select Image", type=['jpg', 'png', 'jpeg'], key=f"chat_img_{st.session_state.uploader_key_chat}")
-        st.text_input("Image Caption (Optional)", value=default_text if default_type==1 else "", key="img_caption")
-        
-        def_typing_img = False
-        def_typing_val_img = 1.0
-        if is_edit_mode and default_type == 1 and "typing_duration" in edit_msg_data:
-            def_typing_img = True
-            def_typing_val_img = edit_msg_data["typing_duration"]
-
-        use_custom_duration_img = st.checkbox("Set sending/typing duration?", value=def_typing_img, key="chk_img")
-        if use_custom_duration_img:
-            st.number_input("Action duration (seconds)", min_value=0.1, value=def_typing_val_img, key="num_img")
-
         st.button(submit_label, on_click=add_message_callback)
 
     elif msg_type == "System Message":
         action_options = ["Add Participant", "Remove Participant", "Change Subject", "Custom Message"]
         action_type = st.selectbox("Action Type", action_options, index=default_sys_action_idx, key="sys_action_type")
         
-        current_val = default_sys_value if (is_edit_mode and default_type==2) else ""
-        current_custom_text = default_text if (is_edit_mode and default_type==2 and default_sys_action_idx==3) else "Messages and calls are end-to-end encrypted."
+        current_val = default_sys_value if (is_edit_mode and default_type==1) else ""
+        current_custom_text = default_text if (is_edit_mode and default_type==1 and default_sys_action_idx==3) else "Messages and calls are end-to-end encrypted."
 
         if action_type == "Add Participant":
             st.text_input("Who to add? (Name)", value=current_val, key="sys_val_add")
@@ -389,11 +438,6 @@ if st.session_state.messages:
         t_val = msg.get('appearance_time', 0.0)
         t_str = f"{t_val:.1f}s"
         
-        display_time_str = f"🕒 {msg['timestamp']}" if msg.get('timestamp') else ""
-        typing_info = ""
-        if msg.get("typing_duration"):
-             typing_info = f"(⏳ {msg['typing_duration']}s)"
-        
         if st.session_state.edit_index == i:
             st.markdown("👇 **You are currently editing this message:**")
         
@@ -404,22 +448,31 @@ if st.session_state.messages:
                 border_color = "rgba(13, 202, 240, 0.5)" 
                 bg_color = "rgba(13, 202, 240, 0.1)"
                 icon = "⚙️"
-                content_html = f"<strong>System</strong>: {msg['text']}"
             elif msg.get('image'):
                 border_color = "rgba(255, 193, 7, 0.5)"
                 bg_color = "rgba(255, 193, 7, 0.1)"
                 icon = "📷"
-                content_html = f"<strong>{msg['sender']}</strong> sent an image"
-                if msg.get('text'):
-                    content_html += f"<br><em style='font-size:0.9em; opacity:0.8'>{msg['text']}</em>"
             else:
                 border_color = "rgba(25, 135, 84, 0.5)"
                 bg_color = "rgba(25, 135, 84, 0.1)"
                 icon = "💬"
-                content_html = f"<strong>{msg['sender']}</strong>: {msg['text']}"
-
-            html_card = f"""<div style="border: 1px solid {border_color}; background-color: {bg_color}; border-radius: 8px; padding: 12px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; margin-bottom: 5px; width: 100%;"><div style="flex-grow: 1; margin-right: 15px; font-size: 16px;">{icon} {content_html}</div><div style="text-align: right; font-size: 13px; color: rgba(255, 255, 255, 0.6); min-width: 90px; line-height: 1.4; border-left: 1px solid rgba(255,255,255,0.1); padding-left: 10px;"><span>⏱️ {t_str}</span><br>{display_time_str} {typing_info}</div></div>"""
             
+            sender_part = f"<strong>{msg['sender']}</strong>" if not msg.get('is_system') else "<strong>System</strong>"
+            text_part = f"{msg['text']}" if msg.get('text') else ""
+            
+            display_time_str = f"🕒 {msg['timestamp']}" if msg.get('timestamp') else ""
+            typing_info = ""
+            if msg.get("typing_duration"):
+                 typing_info = f"(⏳ {msg['typing_duration']}s)"
+            
+            img_html = ""
+            if msg.get('image'):
+                 b64_img = get_image_base64(msg['image'])
+                 if b64_img:
+                     unique_id = f"img-zoom-{i}"
+                     img_html = f"""<label for="{unique_id}"><img src="{b64_img}" class="chat-img-thumb" title="Click to zoom"></label><input type="checkbox" id="{unique_id}" class="zoom-chk"><div class="zoom-overlay"><label for="{unique_id}" style="width:100%;height:100%;display:flex;justify-content:center;align-items:center;"><img src="{b64_img}" class="zoom-img-large"></label></div>"""
+
+            html_card = f'<div class="chat-bubble-container" style="border: 1px solid {border_color}; background-color: {bg_color}; border-radius: 8px; padding: 10px; display: flex; flex-direction: row; justify-content: space-between; align-items: center; width: 100%;"><div style="flex-grow: 1; margin-right: 15px; font-size: 16px; display: flex; align-items: center; flex-wrap: wrap;"><div style="margin-right: 10px;">{icon} {sender_part}: {text_part}</div></div><div style="flex-shrink: 0;">{img_html}</div><div style="text-align: right; font-size: 13px; color: rgba(255, 255, 255, 0.6); min-width: 90px; line-height: 1.4; border-left: 1px solid rgba(255,255,255,0.2); padding-left: 10px; margin-left: 10px;"><span>⏱️ {t_str}</span><br>{display_time_str} {typing_info}</div></div>'
             st.markdown(html_card, unsafe_allow_html=True)
         
         with col_actions:
