@@ -7,13 +7,14 @@ import unicodedata
 
 def load_font(size, bold=False):
     font_name = "assets/fonts/Heebo.ttf" if bold else "assets/fonts/Rubik.ttf"
+    
     try:
-        return ImageFont.truetype(font_name, size)
+        return ImageFont.truetype(font_name, size, layout_engine=ImageFont.Layout.BASIC)
     except IOError:
         try:
-            return ImageFont.truetype("arial.ttf", size)
+            return ImageFont.truetype("arial.ttf", size, layout_engine=ImageFont.Layout.BASIC)
         except:
-             return ImageFont.load_default()
+            return ImageFont.load_default()
 
 def process_text(text):
     return get_display(text, base_dir='R')
