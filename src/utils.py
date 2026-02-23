@@ -17,7 +17,36 @@ def load_font(size, bold=False):
             return ImageFont.load_default()
 
 def process_text(text):
-    return get_display(text, base_dir='R')
+    try:
+        import emoji
+        placeholders = []
+        
+        if hasattr(emoji, 'replace_emoji'):
+            def replace_func(chars, data_dict):
+                placeholders.append(chars)
+                return chr(0xE000 + len(placeholders) - 1)
+            temp_text = emoji.replace_emoji(text, replace=replace_func)
+        else:
+            import re
+            if hasattr(emoji, 'get_emoji_regexp'):
+                pattern = emoji.get_emoji_regexp()
+            else:
+                pattern = re.compile(r'[\U00010000-\U0010ffff\u2600-\u27BF\u2300-\u23FF]+')
+                
+            def repl(m):
+                placeholders.append(m.group(0))
+                return chr(0xE000 + len(placeholders) - 1)
+                
+            temp_text = pattern.sub(repl, text)
+            
+        bidi_text = get_display(temp_text, base_dir='R')
+        
+        for idx, emoji_str in enumerate(placeholders):
+            bidi_text = bidi_text.replace(chr(0xE000 + idx), emoji_str)
+            
+        return bidi_text
+    except ImportError:
+        return get_display(text, base_dir='R')
 
 def get_circular_avatar(path):
     try:

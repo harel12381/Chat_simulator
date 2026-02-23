@@ -204,7 +204,7 @@ def generate_video(output_path, script_data, assets_paths, data_dir_path):
                 
                 if typing_sounds and action_type in ['type_text', 'type_emoji']:
                     chosen_sound = random.choice(typing_sounds)
-                    clip_len = min(0.1, action['duration']) 
+                    clip_len = min(0.15, chosen_sound.duration) 
                     clip = chosen_sound.subclip(0, clip_len).set_start(current_t)
                     audio_clips.append(clip)
 

@@ -1,4 +1,3 @@
-import textwrap
 import numpy as np
 import math
 from PIL import Image, ImageDraw
@@ -6,6 +5,7 @@ from bidi.algorithm import get_display
 from . import config, utils
 from pilmoji import Pilmoji
 import hashlib
+import emoji
 
 DEFAULT_NAME_COLORS = [
     (229, 66, 163), 
@@ -98,6 +98,19 @@ def draw_typing_bubble(img_target, draw, x, y, t, typers_avatars):
 
     return bubble_h
 
+def get_line_width(draw, text, font):
+    try:
+        num_emojis = emoji.emoji_count(text)
+        text_no_emojis = emoji.replace_emoji(text, "")
+    except Exception:
+        num_emojis = 0
+        text_no_emojis = text
+        
+    base_w = draw.textlength(text_no_emojis, font=font)
+    emoji_w = font.size * 1.1 
+    
+    return base_w + (num_emojis * emoji_w)
+
 def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=None, is_continuation=False, name_color=None):
     font_text = utils.load_font(config.FONT_SIZE_TEXT)
     font_time = utils.load_font(config.FONT_SIZE_TIME)
@@ -108,9 +121,6 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     sender_name = msg.get('sender', "")
     time_str = msg.get('timestamp', "")
     
-    sample_bbox = draw.textbbox((0, 0), "Aj", font=font_text)
-    line_height = (sample_bbox[3] - sample_bbox[1]) + 6
-
     if msg.get('is_system'):
         font_text = utils.load_font(22, bold=True)
         sample_bbox_sys = draw.textbbox((0, 0), "Aj", font=font_text)
@@ -123,7 +133,9 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         
         for word in words:
             test_line = ' '.join(current_line + [word])
-            w = draw.textlength(test_line, font=font_text)
+            test_line_disp = utils.process_text(test_line)
+            w = get_line_width(draw, test_line_disp, font_text)
+                
             if w <= max_sys_width:
                 current_line.append(word)
             else:
@@ -131,12 +143,8 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
                 current_line = [word]
         if current_line: wrapped_lines.append(' '.join(current_line))
         
-        display_text = "\n".join(wrapped_lines)
-        final_text = get_display(display_text, base_dir='R')
-        
-        bbox = draw.multiline_textbbox((0, 0), final_text, font=font_text, align='center')
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
+        text_w = max([get_line_width(draw, utils.process_text(line), font_text) for line in wrapped_lines] + [0])
+        text_h = len(wrapped_lines) * line_height_sys
         
         bubble_w = text_w + 60 
         bubble_h = text_h + 25 
@@ -151,18 +159,16 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         center_y = y + bubble_h / 2
         
         if img_target:
-            with Pilmoji(img_target) as pilmoji:
+            with Pilmoji(img_target, emoji_position_offset=(0, -6)) as pilmoji:
                 total_text_h = len(wrapped_lines) * line_height_sys
                 start_y = center_y - (total_text_h / 2)
                 current_sys_y = start_y
                 for line in wrapped_lines:
-                    final_line = get_display(line, base_dir='R')
-                    w = draw.textlength(final_line, font=font_text)
+                    final_line = utils.process_text(line)
+                    w = get_line_width(draw, final_line, font_text)
                     line_x = center_x - (w / 2)
                     pilmoji.text((line_x, current_sys_y), final_line, font=font_text, fill=safe_color(config.COLOR_TEXT_META))
                     current_sys_y += line_height_sys
-        else:
-             draw.multiline_text((center_x, center_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_META), align='center', anchor="mm")
         return bubble_h
     
     img_obj = None
@@ -182,15 +188,19 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         img_obj = rounded_img
 
     text_w, text_h = 0, 0
-    final_text = ""
     wrapped_lines = []
     
+    sample_bbox = draw.textbbox((0, 0), "Aj", font=font_text)
+    line_height = (sample_bbox[3] - sample_bbox[1]) + 8
+
     if text_content:
         words = text_content.split(' ')
         current_line = []
         for word in words:
             test_line = ' '.join(current_line + [word])
-            w = draw.textlength(test_line, font=font_text)
+            test_line_disp = utils.process_text(test_line)
+            w = get_line_width(draw, test_line_disp, font_text)
+                
             if w <= config.MAX_BUBBLE_WIDTH:
                 current_line.append(word)
             else:
@@ -198,12 +208,8 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
                 current_line = [word]
         if current_line: wrapped_lines.append(' '.join(current_line))
             
-        display_text = "\n".join(wrapped_lines)
-        final_text = get_display(display_text, base_dir='R')
-        
-        bbox = draw.multiline_textbbox((0, 0), final_text, font=font_text, align='right')
-        text_w = bbox[2] - bbox[0]
-        text_h = bbox[3] - bbox[1]
+        text_w = max([get_line_width(draw, utils.process_text(line), font_text) for line in wrapped_lines] + [0])
+        text_h = len(wrapped_lines) * line_height
 
     time_w = draw.textlength(time_str, font=font_time)
     
@@ -249,7 +255,7 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
         draw_tail(draw, x, y_pos, bubble_w, bg_color, is_left_side=is_me)
 
     if show_name:
-        final_sender = get_display(sender_name, base_dir='R')
+        final_sender = utils.process_text(sender_name)
         name_w = draw.textlength(final_sender, font=font_name)
         name_x = int(x + bubble_w - name_w - 15)
         final_color = name_color if name_color else "orange"
@@ -262,17 +268,15 @@ def draw_bubble(img_target, draw, msg, is_me, y_pos, chat_media, ticks_color=Non
     if text_content:
         text_draw_x = int(x + bubble_w - 15)
         if img_target:
-            with Pilmoji(img_target) as pilmoji:
+            with Pilmoji(img_target, emoji_position_offset=(0, -6)) as pilmoji:
                 current_text_y_loop = y_pos + text_draw_y
                 for line in wrapped_lines:
-                    final_line = get_display(line, base_dir='R')
-                    w = draw.textlength(final_line, font=font_text)
+                    final_line = utils.process_text(line)
+                    w = get_line_width(draw, final_line, font_text)
                     line_x = text_draw_x - w
                     pilmoji.text((line_x, current_text_y_loop), final_line, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN))
                     current_text_y_loop += line_height
-        else:
-            draw.multiline_text((text_draw_x, y_pos + text_draw_y), final_text, font=font_text, fill=safe_color(config.COLOR_TEXT_MAIN), align='right', anchor="ra")
-    
+
     draw.text((int(time_x), y_pos + meta_draw_y), time_str, font=font_time, fill=safe_color(config.COLOR_TEXT_META))
     if is_me and ticks_color:
         draw_ticks(draw, int(time_x - 22), y_pos + meta_draw_y + 2, ticks_color)
@@ -298,7 +302,8 @@ def draw_keyboard_interface(img, draw, static_assets, current_text, typing_state
     
     for word in words:
         test_line = ' '.join(current_line_words + [word])
-        test_width = draw.textlength(get_display(test_line, base_dir='R'), font=font_input)
+        test_line_disp = utils.process_text(test_line)
+        test_width = get_line_width(draw, test_line_disp, font_input)
         
         if test_width <= max_text_width_px:
             current_line_words.append(word)
@@ -337,10 +342,10 @@ def draw_keyboard_interface(img, draw, static_assets, current_text, typing_state
 
     current_text_y = input_y + (base_padding // 2) - 2
     
-    with Pilmoji(img) as pilmoji:
+    with Pilmoji(img, emoji_position_offset=(0, -6)) as pilmoji:
         for line in wrapped_lines:
-            final_line = get_display(line, base_dir='R')
-            w = draw.textlength(final_line, font=font_input)
+            final_line = utils.process_text(line)
+            w = get_line_width(draw, final_line, font_input)
             text_x = config.WIDTH - 20 - w
             pilmoji.text((text_x, current_text_y), final_line, font=font_input, fill=(0,0,0))
             current_text_y += line_height
@@ -358,10 +363,10 @@ def draw_keyboard_interface(img, draw, static_assets, current_text, typing_state
             draw.polygon(points, fill=safe_color(config.COLOR_KEY_POPUP))
             
             font_pop = utils.load_font(40, bold=True)
-            char_display = get_display(active_char, base_dir='R')
-            w = draw.textlength(char_display, font=font_pop)
+            char_display = utils.process_text(active_char)
+            w = get_line_width(draw, char_display, font_pop)
             
-            with Pilmoji(img) as pilmoji:
+            with Pilmoji(img, emoji_position_offset=(0, -6)) as pilmoji:
                  pilmoji.text((pop_x + (pop_w-w)/2, pop_y + 5), char_display, font=font_pop, fill=safe_color(config.COLOR_KEY_POPUP_TEXT))   
 
     elif active_touch:
@@ -403,7 +408,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     
     for i, msg in enumerate(visible_msgs):
         if msg.get('is_system') and i > 0:
-            total_h += 15
+            total_h += 5
         is_continuation = False
         if i > 0:
             prev = visible_msgs[i-1]
@@ -413,7 +418,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         h = draw_bubble(None, temp_draw, msg, msg['sender']==my_name, 0, chat_media, None, is_continuation=is_continuation, name_color=participants_colors.get(msg['sender']) if participants_colors else None)
         msg_heights.append(h)
         total_h += h + config.MESSAGE_SPACING
-        if msg.get('is_system'): total_h += 15
+        if msg.get('is_system'): total_h += 5
         
     if typers: total_h += 50 + config.MESSAGE_SPACING
 
@@ -432,7 +437,9 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         
         for word in words:
             test_line = ' '.join(current_line_words + [word])
-            test_width = temp_draw.textlength(get_display(test_line, base_dir='R'), font=font_input)
+            test_line_disp = utils.process_text(test_line)
+            test_width = get_line_width(temp_draw, test_line_disp, font_input)
+            
             if test_width <= max_text_width_px:
                 current_line_words.append(word)
             else:
@@ -467,7 +474,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
             if prev['sender'] == msg['sender'] and not prev.get('is_system') and not msg.get('is_system'):
                 is_continuation = True
 
-        if msg.get('is_system') and i > 0: current_y += 15
+        if msg.get('is_system') and i > 0: current_y += 5
 
         if current_y + msg_h > config.HEADER_HEIGHT:
             ticks = config.COLOR_TICKS_GREY
@@ -493,7 +500,7 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
                         img.paste(avatar, (avatar_x, int(current_y)), avatar)
 
         current_y += msg_h + config.MESSAGE_SPACING
-        if msg.get('is_system'): current_y += 15
+        if msg.get('is_system'): current_y += 5
 
     if typers and current_y > config.HEADER_HEIGHT:
         typers_avatars = [participants_imgs.get(name) for name in typers if participants_imgs.get(name)]
@@ -505,11 +512,11 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
     header_offset = 70 
     
     header_name = current_group_name if current_group_name else group_info['name']
-    grp_name = get_display(header_name, base_dir='R')
+    grp_name = utils.process_text(header_name)
     f_header = utils.load_font(config.FONT_SIZE_HEADER, bold=True)
     
-    with Pilmoji(img) as pilmoji:
-        w = draw.textlength(grp_name, font=f_header)
+    with Pilmoji(img, emoji_position_offset=(0, -6)) as pilmoji:
+        w = get_line_width(draw, grp_name, f_header)
         pilmoji.text((config.WIDTH - 50 - header_offset - w, 50 - 33), grp_name, font=f_header, fill="white")
     
     if current_group_members is not None:
@@ -518,16 +525,15 @@ def render_frame(t, script, participants_imgs, group_info, group_avatar, my_name
         base_list = list(participants_imgs.keys())
 
     display_participants = ["את/ה"]
-
     display_participants.extend([name for name in base_list if name != my_name])
         
     parts_txt = ", ".join(display_participants)   
     if len(parts_txt) > 30: parts_txt = parts_txt[:30] + "..."
-    parts_display = get_display(parts_txt, base_dir='R')
+    parts_display = utils.process_text(parts_txt)
     f_sub = utils.load_font(18)
     
-    with Pilmoji(img) as pilmoji:
-         w_sub = draw.textlength(parts_display, font=f_sub)
+    with Pilmoji(img, emoji_position_offset=(0, -4)) as pilmoji:
+         w_sub = get_line_width(draw, parts_display, f_sub)
          pilmoji.text((config.WIDTH - 50 - header_offset - w_sub, 78 - 18), parts_display, font=f_sub, fill=(200,200,200))
     
     if group_avatar:
