@@ -7,8 +7,8 @@
 
 A high-fidelity Python-based engine and interactive web app designed to generate realistic WhatsApp chat simulation videos. This tool creates pixel-perfect animations based on a simple JSON script, featuring full support for Right-to-Left (RTL) languages like Hebrew, dynamic system messages, and precise timing control.
 
-*(**Note:** Insert a GIF or screenshot of your generated video/web app here!)*
-`![Demo](link_to_your_gif.gif)`
+<img width="1914" height="910" alt="image" src="https://github.com/user-attachments/assets/931e24bc-43dd-48cf-8c22-29ae2cb2da5c" />
+
 
 ## 🚀 Key Features
 
