@@ -1,37 +1,48 @@
-# 📱 WhatsApp Chat Simulator
+# 🎬 WhatsApp Chat Simulator - Video Engine & Web App
 
-A high-fidelity Python-based engine designed to generate realistic WhatsApp chat simulation videos. This tool creates pixel-perfect animations based on a simple JSON script, featuring full support for Right-to-Left (RTL) languages like Hebrew, image sharing, dynamic system messages, and precise timing control.
+![Python](https://img.shields.io/badge/Python-3.8+-3670A0?style=flat&logo=python&logoColor=ffdd54)
+![Streamlit](https://img.shields.io/badge/Streamlit-Web_App-FF4B4B?style=flat&logo=streamlit&logoColor=white)
+![MoviePy](https://img.shields.io/badge/MoviePy-Video_Editing-red?style=flat)
+![Pillow](https://img.shields.io/badge/Pillow-Image_Processing-blue?style=flat)
+
+A high-fidelity Python-based engine and interactive web app designed to generate realistic WhatsApp chat simulation videos. This tool creates pixel-perfect animations based on a simple JSON script, featuring full support for Right-to-Left (RTL) languages like Hebrew, dynamic system messages, and precise timing control.
+
+*(**Note:** Insert a GIF or screenshot of your generated video/web app here!)*
+`![Demo](link_to_your_gif.gif)`
 
 ## 🚀 Key Features
 
-* **🎨 Realistic UI:** Exact replication of the WhatsApp interface, including the Header, Message Bubbles, Blue Ticks, and Status Bar.
+* **🌐 Interactive Web App:** Wrapped in a **Streamlit** frontend, allowing users to upload JSON scripts, configure settings, and generate videos directly from the browser.
+* **🎨 Realistic UI:** Exact replication of the WhatsApp interface, including the Header, Message Bubbles, and Status Bar.
 * **⌨️ Advanced Typing Simulation:**
     * **For "Me":** Full on-screen keyboard animation featuring visual touch ripples, letter pop-ups, and dynamic human-like typing speed.
-    * **For Others:** Realistic "typing..." bubble animation with animated dots appearing before the message.
-* **✅ Smart Read Receipts:** Integrated **Blue Ticks** logic! Ticks automatically turn blue when other participants respond, simulating that the message has been read.
-* **🎭 Dynamic System Messages:** Fully functional system events that update the UI in real-time:
-    * `add_participant`: Adds a name to the header's participant list.
-    * `remove_participant`: Removes a name from the header.
-    * `change_subject`: Instantly updates the group title.
-* **🌈 Participant Customization:** Assign specific **HEX colors** to participants' names or let the system assign a consistent random color (consistent per name) just like the real app.
-* **🖼️ Multimedia Support:** Seamlessly send text messages and images with.
-* **⏱️ Precision Timing:** Total manual control over the `appearance_time` (when a message pops up) and `typing_duration` (how long the typing animation lasts).
+    * **For Others:** Realistic "typing..." bubble animation with animated dots.
+* **✅ Smart Read Receipts:** Integrated **Blue Ticks** logic! Ticks automatically turn blue when other participants respond.
+* **🎭 Dynamic System Messages:** Fully functional system events that update the UI in real-time (`add_participant`, `remove_participant`, `change_subject`).
+* **🌈 Participant Customization:** Assign specific **HEX colors** to participants' names or let the system assign a consistent random color.
 * **🛡️ Script Validation:** Built-in console warnings to detect "Time Travel" (unordered messages), "Ghost Messages" (sender not in group), and "Typing Overlaps."
 
 ---
 
 ## 🛠️ Installation & Usage
 
-1.  **Install Dependencies:**
+1.  **Clone & Install Dependencies:**
     ```bash
+    git clone [https://github.com/harel12381/Chat_simulator.git](https://github.com/harel12381/Chat_simulator.git)
+    cd Chat_simulator
     pip install -r requirements.txt
     ```
-2.  **Run the Generator:**
+2.  **Run the Web App (Streamlit GUI):**
+    ```bash
+    streamlit run app.py
+    ```
+3.  **Or Run the Video Engine (CLI):**
     ```bash
     python main.py
     ```
 
 ---
+
 ## 🎬 How to Use
 
 ### 1. Setup Your Assets
@@ -88,7 +99,6 @@ Messages are divided into two types: **Regular** and **System**.
 | `typing_duration` | Number | Optional | Duration of the typing animation in seconds. | ~0.15s per char (Me) / 1.0s (Others). |
 
 #### ⚙️ System Message
-Used for status updates or modifying the group state.
 | Field | Type | Required/Optional | Description |
 | :--- | :--- | :--- | :--- |
 | `is_system` | Boolean | **Required** | Must be `true`. |
@@ -100,14 +110,11 @@ Used for status updates or modifying the group state.
 ---
 
 ## 🛡️ Console Validation System
-
 During generation, the engine will print yellow warnings for the following cases:
-* **Negative Time:** If a message is scheduled to start typing before the video begins.
-* **Typing Overlap:** If a participant starts typing a new message before finishing the previous one.
-* **Ghost Message:** If a participant sends a message but is not currently a member of the group.
-* **Time Travel:** If the order of messages in the JSON does not match their `appearance_time`.
-
-**Recommendation:** Always monitor the terminal output to ensure your script timings are logical!
+* **Negative Time:** Message scheduled before the video begins.
+* **Typing Overlap:** A participant starts typing a new message before finishing the previous one.
+* **Ghost Message:** A participant sends a message but is not currently a member of the group.
+* **Time Travel:** Message order in JSON does not match their `appearance_time`.
 
 **Example Snippet:**
 ```json
@@ -135,7 +142,7 @@ During generation, the engine will print yellow warnings for the following cases
       "appearance_time": 3,
       "sender": "Jordan",
       "text": "Check out the new logo!",
-      "image": "chat_media/logo.jpg"
+      "image": "chat_media/logo.jpg",
       "timestamp": "10:00"
     },
     {
